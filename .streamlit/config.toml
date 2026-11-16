@@ -1,0 +1,11 @@
+[global]
+developmentMode = false
+
+[server]
+headless = true
+maxUploadSize = 1
+enableXsrfProtection = true
+enableCORS = true
+
+[browser]
+gatherUsageStats = false

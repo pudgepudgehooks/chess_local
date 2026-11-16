@@ -5,6 +5,7 @@ import io
 import os
 from pathlib import Path
 import shutil
+import time
 
 import chess
 import chess.engine
@@ -56,7 +57,8 @@ def score_data(score):
     return {'cp': score.score(), 'mate': score.mate()}
 
 
-def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30):
+def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
+                 position_time=None, deadline=None):
     name = username.strip().casefold()
     if not name:
         raise ValueError('Enter the username whose mistakes you want to study.')
@@ -71,11 +73,13 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30):
         return []
     puzzles = []
     for move in game.mainline_moves():
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError('Analysis time limit reached')
         if board.turn != color:
             board.push(move)
             continue
         # Rank all first moves to identify acceptable alternatives consistently.
-        lines = engine.analyse(board, chess.engine.Limit(depth=depth), multipv=board.legal_moves.count())
+        lines = engine.analyse(board, chess.engine.Limit(depth=depth, time=position_time), multipv=board.legal_moves.count())
         lines = [line for line in lines if line.get('pv')]
         if not lines:
             board.push(move)
@@ -83,6 +87,8 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30):
         best = lines[0]
         before = best['score'].pov(color)
         actual = next((line for line in lines if line['pv'][0] == move), None)
+        if actual is None and position_time is not None:
+            actual = engine.analyse(board, chess.engine.Limit(depth=depth, time=position_time), root_moves=[move])
         if actual is None:
             raise ValueError('Engine did not evaluate the played move.')
         after = actual['score'].pov(color)

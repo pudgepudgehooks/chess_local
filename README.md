@@ -1,5 +1,9 @@
 # Chess Mistake Trainer
 
+## Private online beta
+
+The online entry point is **beta_app.py**, with invite-only Google login, private PostgreSQL puzzle libraries, and bounded background Stockfish analysis. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for Community Cloud deployment and required database/login settings. The local trainer below remains available for offline personal use and is not the entry point to publish.
+
 Generate puzzles from your own moves in Chess.com archives or uploaded PGNs, then practice with saved review progress. Requires Python 3.10+ and a separately installed Stockfish executable.
 
 ## Start (PowerShell)

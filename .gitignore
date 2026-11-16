@@ -9,3 +9,6 @@ puzzles.tmp
 !.env.example
 .streamlit/secrets.toml
 *.log
+*.db
+*.db-wal
+*.db-shm
