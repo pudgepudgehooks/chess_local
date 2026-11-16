@@ -17,6 +17,7 @@ const send=(type,data={})=>window.parent.postMessage({isStreamlitMessage:true,ty
 const board=document.getElementById('board'), status=document.getElementById('status'), ghost=document.getElementById('ghost');
 const promotion=document.getElementById('promotion');
 let args=null, selected=null, drag=null, suppressClick=false;
+const t=message=>args?.labels?.[message]||message;
 function height(){send('streamlit:setFrameHeight',{height:document.getElementById('wrap').scrollHeight+8});}
 function highlight(){
  for(const square of board.children){
@@ -27,21 +28,21 @@ function highlight(){
 function reset(){selected=null;promotion.hidden=true;ghost.hidden=true;drag=null;highlight();height();}
 function submit(uci){
  send('streamlit:setComponentValue',{value:{uci,fen:args.fen,event_id:crypto.randomUUID()},dataType:'json'});
- reset();status.textContent='Move submitted. See the result below the board.';
+ reset();status.textContent=t('Move submitted. See the result below the board.');
 }
 function attempt(from,to){
  const moves=args.legal.filter(m=>m.slice(0,4)===from+to);
- if(!moves.length){reset();status.textContent='Illegal move. Try another destination.';return;}
+ if(!moves.length){reset();status.textContent=t('Illegal move. Try another destination.');return;}
  if(moves.length===1){submit(moves[0]);return;}
  promotion.hidden=false;
  const choices=document.getElementById('choices');choices.replaceChildren();
  for(const code of ['q','r','b','n']){
   const move=moves.find(m=>m[4]===code);if(!move)continue;
-  const button=document.createElement('button');button.textContent={q:'Queen',r:'Rook',b:'Bishop',n:'Knight'}[code];
+  const button=document.createElement('button');button.textContent=t({q:'Queen',r:'Rook',b:'Bishop',n:'Knight'}[code]);
   button.onclick=()=>submit(move);choices.append(button);
  }
- const cancel=document.createElement('button');cancel.textContent='Cancel';cancel.onclick=reset;choices.append(cancel);
- status.textContent='Choose your promotion piece.';height();
+ const cancel=document.createElement('button');cancel.textContent=t('Cancel');cancel.onclick=reset;choices.append(cancel);
+ status.textContent=t('Choose your promotion piece.');height();
 }
 function select(square){
  if(selected && selected!==square){attempt(selected,square);return;}
@@ -79,20 +80,23 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')reset();});
 window.addEventListener('message',e=>{
  if(e.source!==window.parent||e.data.type!=='streamlit:render')return;
  const incoming=e.data.args;
- if(args && args.fen===incoming.fen)return;
+ if(args && args.fen===incoming.fen && args.language===incoming.language)return;
  args=incoming;selected=null;promotion.hidden=true;board.replaceChildren();
+ document.documentElement.lang=args.language==='zh'?'zh-CN':'en';
+ board.setAttribute('aria-label',t('Chess puzzle board'));
+ promotion.querySelector('strong').textContent=t('Promote to:');
  const files=args.white?'abcdefgh':'hgfedcba', ranks=args.white?'87654321':'12345678';
  for(let row=0;row<8;row++)for(let col=0;col<8;col++){
   const square=files[col]+ranks[row],piece=args.pieces[square];
   const button=document.createElement('button');button.type='button';button.dataset.square=square;
   button.className='square'+((files.charCodeAt(col)-97+Number(ranks[row]))%2===1?' dark':'');
-  button.setAttribute('aria-label',square+(piece?' '+piece.label:' empty'));
+  button.setAttribute('aria-label',square+' '+(piece?piece.label:t('empty')));
   if(piece)button.innerHTML=piece.svg;
   if(col===0){const label=document.createElement('span');label.className='coord rank';label.textContent=ranks[row];button.append(label);}
   if(row===7){const label=document.createElement('span');label.className='coord file';label.textContent=files[col];button.append(label);}
   board.append(button);
  }
- status.textContent='Drag a piece, or select its square and destination.';height();
+ status.textContent=t('Drag a piece, or select its square and destination.');height();
 });
 new ResizeObserver(height).observe(document.getElementById('wrap'));
 send('streamlit:componentReady',{apiVersion:1});height();

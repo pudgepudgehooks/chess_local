@@ -3,6 +3,7 @@ from pathlib import Path
 import chess
 import chess.svg
 from streamlit.components.v1 import declare_component
+from i18n import tr, language
 
 _component = declare_component('chess_drag_board', path=str(Path(__file__).parent / 'board_component'))
 
@@ -10,9 +11,15 @@ _component = declare_component('chess_drag_board', path=str(Path(__file__).paren
 def drag_board(board, key):
     return _component(
         fen=board.fen(), white=board.turn == chess.WHITE,
+        language=language(),
+        labels={key: tr(key) for key in [
+            'Chess puzzle board', 'empty', 'Drag a piece, or select its square and destination.',
+            'Move submitted. See the result below the board.', 'Illegal move. Try another destination.',
+            'Promote to:', 'Queen', 'Rook', 'Bishop', 'Knight', 'Cancel', 'Choose your promotion piece.',
+        ]},
         pieces={chess.square_name(s): {
             'svg': chess.svg.piece(p),
-            'label': f"{'White' if p.color else 'Black'} {chess.piece_name(p.piece_type)}",
+            'label': f"{tr('White' if p.color else 'Black')} {tr(chess.piece_name(p.piece_type))}",
             'own': p.color == board.turn,
         } for s, p in board.piece_map().items()},
         legal=[m.uci() for m in board.legal_moves], key=key, default=None,

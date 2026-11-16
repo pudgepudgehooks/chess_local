@@ -31,6 +31,8 @@ Use `--engine 'C:\path\to\stockfish.exe'` instead of the environment variable if
 
 ## Review and storage
 
+Use **Language / 语言** in the sidebar to switch between English and Simplified Chinese. The setting is kept during the session and in the page URL (`?lang=zh` or `?lang=en`). App labels, feedback, beta access messages, and draggable-board controls are translated; player names and SAN/UCI chess notation are preserved. Streamlit's built-in menus and file-picker chrome follow the framework/browser language.
+
 Drag a piece onto its destination, or click the source and destination squares. Legal destinations are highlighted. For promotion, choose Queen, Rook, Bishop, or Knight. Illegal drops return to the starting position. The board faces the side to move and works with mouse or touch. Castling is entered by moving the king to its destination; en passant works normally. The original position stays available for retries after each answer.
 
 Typed SAN (`Nf3`, `O-O`) and UCI (`g1f3`, promotion `e7e8q`) remain available. Use hints, reveal the continuation, or choose Next puzzle. Correct answers are scheduled after 1, 2, 4, 8, 16, then 30 days; wrong answers after 10 minutes. Turn off the due-only filter to practice all puzzles. The draggable board is bundled locally and needs no CDN or extra dependencies.
