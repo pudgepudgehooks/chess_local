@@ -1,0 +1,3 @@
+python-chess>=1.999,<2
+requests>=2.31,<3
+streamlit>=1.40,<2

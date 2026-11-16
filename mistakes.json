@@ -1,0 +1,1 @@
+[{"fen": "2kr3r/pbppbpp1/1p1q3p/3Np3/1PBnP2N/P2P4/2P2PPP/R2QK2R w KQ - 1 12", "played": "h4f5", "best_move": "h4f3", "loss": 327}, {"fen": "2kr3r/p1p2p2/1bQp4/1P2pP1p/1q4p1/3P4/5PPP/R1R3K1 b - - 1 24", "played": "f7f6", "best_move": "b4b2", "loss": 864}, {"fen": "2kr3r/R1p5/2Qp1p2/1P2pP1p/1q4p1/3P4/5bPP/2R3K1 w - - 0 26", "played": "g1h1", "best_move": "g1f1", "loss": 305}]
