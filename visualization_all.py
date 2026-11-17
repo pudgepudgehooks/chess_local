@@ -153,6 +153,7 @@ def main(repository=None, playback_engine=None):
     due_only = st.checkbox(tr('Only show puzzles due for review'), value=True, key='due_only')
     names = sorted({p['username'] for p in library['puzzles'] if p.get('username')})
     player = st.selectbox(tr('Puzzle owner'), ['All players'] + names, format_func=lambda value, all_label=tr('All players'): all_label if value == 'All players' else value, key='puzzle_player')
+    st.caption(tr('Puzzle owner is the Chess.com or Lichess username whose mistakes generated these puzzles, rather than your app login. Select All players to review every chess username in your saved library.'))
     owned = [p for p in library['puzzles'] if player == 'All players' or p.get('username') == player]
     months = {puzzle_month(p) for p in owned}
     month_options = ['All months'] + sorted(months - {'Unknown date'}, reverse=True)

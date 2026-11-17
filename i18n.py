@@ -3,6 +3,7 @@ import re
 import streamlit as st
 
 ZH = {
+    'Puzzle owner is the Chess.com or Lichess username whose mistakes generated these puzzles, rather than your app login. Select All players to review every chess username in your saved library.': '题目所属用户是生成这些错题的 Chess.com 或 Lichess 用户名，与登录本应用的账号不同。选择“所有用户名”可复习已保存题库中所有棋谱用户名的错题。',
     'Minimum review loss (centipawns)': '复习最低失分（厘兵）',
     '0 shows all saved puzzles, including mate-related mistakes without a numeric loss. Higher values show only puzzles with a recorded loss at or above this value.': '设为 0 显示所有已保存的题目，包括没有数值失分的将杀相关错题。大于 0 时，只显示已记录失分且达到该数值的题目。',
     'This filters saved puzzles without deleting them or changing analysis settings.': '此项仅筛选已保存的题目，不会删除题目或更改分析设置。',
