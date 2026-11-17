@@ -52,14 +52,23 @@ class LanguageTests(unittest.TestCase):
         self.assertTrue(any('合法着法' in e.value for e in app.error))
 
     def test_beta_switch_before_login(self):
-        app = self.app('beta_app.py')
-        app.secrets['beta'] = {'allowed_emails': ['friend@example.com'], 'database_url': 'postgresql://example/never-connect'}
-        app.secrets['auth'] = {'client_id': 'test-client'}
-        app.user = {'is_logged_in': False}
-        app.run(timeout=30)
-        app.selectbox(key='ui_language').set_value('zh').run()
-        self.assertFalse(app.exception)
-        self.assertTrue(any(b.label == '使用 Google 登录' for b in app.button))
+        import tempfile
+        from beta_store import BetaStore
+        from beta_auth import PASSWORDS
+        with tempfile.TemporaryDirectory() as directory:
+            store = BetaStore('sqlite:///' + str(Path(directory) / 'test.db'))
+            try:
+                with patch('beta_store.BetaStore', return_value=store):
+                    app = self.app('beta_app.py')
+                    app.secrets['beta'] = {'database_url': 'postgresql://example/' + Path(directory).name,
+                        'accounts': {'alice': {'password_hash': PASSWORDS.hash('assigned password here')}}}
+                    app.run(timeout=30)
+                    app.selectbox(key='ui_language').set_value('zh').run()
+                    self.assertFalse(app.exception)
+                    self.assertTrue(any(b.label == '登录' for b in app.button))
+                    self.assertTrue(any(t.label == '用户名' for t in app.text_input))
+            finally:
+                store.engine.dispose()
 
     def test_board_and_job_messages_translate(self):
         from i18n import job_message

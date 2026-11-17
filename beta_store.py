@@ -135,19 +135,28 @@ class BetaStore:
 
 
 class UserLibrary:
-    def __init__(self, store, owner):
+    def __init__(self, store, owner, authorize=None):
         self.store, self.owner = store, owner
+        self.authorize = authorize
+
+    def _check_access(self):
+        if self.authorize is not None and not self.authorize():
+            raise PermissionError('Your session expired. Please sign in again.')
 
     def load(self):
+        self._check_access()
         return self.store.load(self.owner)
 
     def review(self, puzzle, correct, event):
+        self._check_access()
         return self.store.review(self.owner, puzzle['id'], correct, event)
 
     def submit(self, username, texts, depth, threshold):
+        self._check_access()
         from beta_worker import validate_payload
         payload = validate_payload(username, texts, depth, threshold)
         return self.store.submit(self.owner, payload)
 
     def recent_jobs(self):
+        self._check_access()
         return self.store.recent_jobs(self.owner)

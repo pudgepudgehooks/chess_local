@@ -1,5 +1,6 @@
 python-chess>=1.999,<2
 requests>=2.31,<3
-streamlit[auth]>=1.42,<2
+streamlit>=1.67,<2
+argon2-cffi>=23.1,<26
 SQLAlchemy>=2.0,<3
 psycopg[binary]>=3.2,<4

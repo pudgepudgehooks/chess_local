@@ -2,7 +2,7 @@
 
 ## Private online beta
 
-The online entry point is **beta_app.py**, with invite-only Google login, private PostgreSQL puzzle libraries, and bounded background Stockfish analysis. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for Community Cloud deployment and required database/login settings. The local trainer below remains available for offline personal use and is not the entry point to publish.
+The online entry point is **beta_app.py**, with administrator-assigned usernames/passwords for up to four people, private PostgreSQL puzzle libraries, and bounded background Stockfish analysis. There is no self-registration or Google login. Generate account hashes with `python account_admin.py USERNAME`, then paste the generated sections into Streamlit Secrets. Follow [DEPLOYMENT.md](DEPLOYMENT.md). The local trainer below remains available for personal use and is not the entry point to publish.
 
 Generate puzzles from your own moves in Chess.com archives, Lichess history, or uploaded PGNs, then practice with saved review progress. Requires Python 3.10+ and a separately installed Stockfish executable.
 

@@ -1,15 +1,145 @@
-"""Fail-closed invite gate with a stable OIDC subject as the data owner."""
+"""Administrator-assigned accounts with Argon2id hashes and revocable sessions."""
 import hashlib
+import re
+import secrets
 import time
+import uuid
+
+from argon2 import PasswordHasher, extract_parameters
+from argon2.low_level import Type
+from argon2.exceptions import VerificationError, InvalidHashError
+from sqlalchemy import Column, Float, Integer, MetaData, String, Table, Text, select, update, delete
+from beta_store import guard
+
+metadata = MetaData()
+users = Table('beta_users', metadata,
+    Column('id', String(64), primary_key=True),
+    Column('username', String(32), nullable=False, unique=True),
+    Column('password_hash', Text, nullable=False),
+    Column('created', Float, nullable=False))
+sessions = Table('beta_sessions', metadata,
+    Column('token_hash', String(64), primary_key=True), Column('owner', String(64), nullable=False),
+    Column('expires', Float, nullable=False))
+attempts = Table('beta_auth_attempts', metadata,
+    Column('key', String(64), primary_key=True), Column('started', Float, nullable=False),
+    Column('count', Integer, nullable=False))
+PASSWORDS = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
+DUMMY_HASH = PASSWORDS.hash(secrets.token_urlsafe(32))
+SESSION_SECONDS = 12 * 3600
 
 
-def owner_for_claims(claims, allowed_emails):
-    email = str(claims.get('email', '')).strip().casefold()
-    allowed = {str(e).strip().casefold() for e in allowed_emails if str(e).strip()}
-    if not allowed or claims.get('is_logged_in') is not True or claims.get('email_verified') is not True:
-        raise PermissionError('Sign in with a verified, invited account.')
-    if not isinstance(claims.get('exp'), (int, float)) or claims['exp'] <= time.time():
-        raise PermissionError('Your sign-in expired. Sign out and sign in again.')
-    if email not in allowed or not claims.get('iss') or not claims.get('sub'):
-        raise PermissionError('This account is not on the private beta invitation list.')
-    return hashlib.sha256((str(claims['iss']) + '\0' + str(claims['sub'])).encode()).hexdigest()
+def digest(value):
+    return hashlib.sha256(value.encode('utf-8')).hexdigest()
+
+
+def normalized_username(value):
+    value = value.strip().lower()
+    if not re.fullmatch(r'[a-z0-9_-]{3,32}', value):
+        raise ValueError('Use 3–32 letters, numbers, underscores or hyphens for your username.')
+    return value
+
+
+def validate_password(password):
+    if not isinstance(password, str) or not 12 <= len(password) <= 128:
+        raise ValueError('Use a password with 12–128 characters.')
+
+
+def validate_accounts(configured):
+    if not isinstance(configured, dict) or not 1 <= len(configured) <= 4:
+        raise ValueError('Configure between one and four accounts.')
+    result = {}
+    for username, hashed in configured.items():
+        username = normalized_username(username)
+        if username in result or not isinstance(hashed, str):
+            raise ValueError('Duplicate account or invalid password hash.')
+        try:
+            params = extract_parameters(hashed)
+        except (InvalidHashError, ValueError):
+            raise ValueError('Generate password hashes with account_admin.py.') from None
+        if params.type != Type.ID or not 19456 <= params.memory_cost <= 65536 or not 2 <= params.time_cost <= 4 or not 1 <= params.parallelism <= 4 or params.salt_len < 16 or params.hash_len < 16:
+            raise ValueError('Generate password hashes with account_admin.py.')
+        result[username] = hashed
+    return result
+
+
+class Accounts:
+    def __init__(self, engine, configured_accounts):
+        self.engine = engine
+        self.configured = validate_accounts(configured_accounts)
+        metadata.create_all(engine)
+        self.sync()
+
+    def sync(self):
+        """Apply administrator edits without changing stable account/puzzle IDs."""
+        with self.engine.begin() as db:
+            self._lock(db)
+            disabled = select(users.c.id).where(users.c.username.not_in(list(self.configured)))
+            db.execute(delete(sessions).where(sessions.c.owner.in_(disabled)))
+            for username, password_hash in self.configured.items():
+                row = db.execute(select(users).where(users.c.username == username)).mappings().first()
+                if row is None:
+                    db.execute(users.insert().values(id=uuid.uuid4().hex, username=username,
+                        password_hash=password_hash, created=time.time()))
+                elif row['password_hash'] != password_hash:
+                    db.execute(update(users).where(users.c.id == row['id']).values(password_hash=password_hash))
+                    db.execute(delete(sessions).where(sessions.c.owner == row['id']))
+
+    def _lock(self, db):
+        db.execute(select(guard).where(guard.c.id == 1).with_for_update()).first()
+
+    def _attempt(self, username, client):
+        """Durable limits across browser sessions and process restarts."""
+        now = time.time()
+        window = 900
+        limits = [('login:global', 100), (f'login:client:{client}', 30), (f'login:user:{username}', 10)]
+        with self.engine.begin() as db:
+            self._lock(db)
+            db.execute(delete(attempts).where(attempts.c.started < now - 3600))
+            for key, limit in limits:
+                key = digest(key)
+                row = db.execute(select(attempts).where(attempts.c.key == key)).mappings().first()
+                if row and row['started'] > now - window:
+                    if row['count'] >= limit:
+                        raise ValueError('Too many attempts. Please try again later.')
+                    db.execute(update(attempts).where(attempts.c.key == key).values(count=row['count'] + 1))
+                elif row:
+                    db.execute(update(attempts).where(attempts.c.key == key).values(started=now, count=1))
+                else:
+                    db.execute(attempts.insert().values(key=key, started=now, count=1))
+
+    def login(self, username, password, client='unknown'):
+        username = username.strip().lower()[:128]
+        self._attempt(username, client)
+        with self.engine.connect() as db:
+            row = db.execute(select(users).where(users.c.username == username)).mappings().first()
+        if username not in self.configured or (row and row['password_hash'] != self.configured[username]):
+            row = None
+        try:
+            if not isinstance(password, str) or len(password) > 128:
+                raise ValueError()
+            PASSWORDS.verify(row['password_hash'] if row else DUMMY_HASH, password)
+            if row is None:
+                raise ValueError()
+        except (VerificationError, InvalidHashError, ValueError):
+            raise ValueError('Invalid username or password.') from None
+        token = secrets.token_urlsafe(32)
+        with self.engine.begin() as db:
+            self._lock(db)
+            current = db.execute(select(users.c.password_hash).where(users.c.id == row['id'])).first()
+            if not current or current[0] != row['password_hash']:
+                raise ValueError('Invalid username or password.')
+            db.execute(delete(sessions).where(sessions.c.expires <= time.time()))
+            db.execute(sessions.insert().values(token_hash=digest(token), owner=row['id'], expires=time.time() + SESSION_SECONDS))
+        return token
+
+    def identity(self, token):
+        if not isinstance(token, str) or not 20 <= len(token) <= 128:
+            return None
+        with self.engine.connect() as db:
+            row = db.execute(select(users.c.id, users.c.username).join(sessions, users.c.id == sessions.c.owner).where(
+                sessions.c.token_hash == digest(token), sessions.c.expires > time.time())).mappings().first()
+            return dict(row) if row and row['username'] in self.configured else None
+
+    def logout(self, token):
+        with self.engine.begin() as db:
+            db.execute(delete(sessions).where(sessions.c.token_hash == digest(token)))

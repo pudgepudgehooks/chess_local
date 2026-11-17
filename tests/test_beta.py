@@ -9,33 +9,8 @@ import unittest
 from unittest.mock import patch
 import uuid
 
-from beta_auth import owner_for_claims
 
 PGN = '[White "Me"]\n[Black "Other"]\n\n1. e4 e5 *'
-
-
-class AuthTests(unittest.TestCase):
-    def claims(self, **extra):
-        return dict(is_logged_in=True, email='Friend@example.com', email_verified=True,
-                    iss='https://accounts.google.com', sub='123', exp=time.time() + 3600, **extra)
-
-    def test_invited_identity_is_stable(self):
-        claims = self.claims()
-        owner = owner_for_claims(claims, ['friend@example.com'])
-        self.assertEqual(len(owner), 64)
-        claims['email'] = 'renamed@example.com'
-        self.assertEqual(owner_for_claims(claims, ['renamed@example.com']), owner)
-
-    def test_rejects_uninvited_unverified_logged_out_expired(self):
-        claims = self.claims()
-        with self.assertRaises(PermissionError):
-            owner_for_claims(claims, [])
-        with self.assertRaises(PermissionError):
-            owner_for_claims(claims, ['someoneelse@example.com'])
-        for key, value in [('is_logged_in', False), ('email_verified', False), ('email_verified', 'true'),
-                           ('sub', ''), ('iss', ''), ('exp', time.time() - 1)]:
-            with self.subTest(key=key, value=value), self.assertRaises(PermissionError):
-                owner_for_claims(dict(claims, **{key: value}), ['friend@example.com'])
 
 
 @unittest.skipUnless(importlib.util.find_spec('sqlalchemy'), 'SQLAlchemy is not installed')

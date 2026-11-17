@@ -1,72 +1,60 @@
-# Private beta on Streamlit Community Cloud
+# Small-group beta: administrator-assigned accounts
 
-Deploy **beta_app.py**, not visualization_all.py or run_trainer.py. The local trainer intentionally has no authentication. Never publish that local entry point as the beta.
+Publish **beta_app.py** from `pudgepudgehooks/chess_local`, branch `main`, with Python 3.11. The local entry points have no authentication and should not be published.
 
-## What is included
+## Assign usernames and passwords
 
-- Google OIDC sign-in plus a verified-email invitation list, checked before database access.
-- Identity derived from the provider's issuer and subject, not the typed Chess.com username.
-- PostgreSQL tables for puzzles, review events, and analysis jobs. All reads and writes are scoped to the signed-in account. Local JSON and legacy sample puzzles are not imported online.
-- Transactional review updates and idempotent drag events; regenerated puzzles preserve review history.
-- One active analysis globally, one queued/running request per user, six requests per day, queue capacity 20. Each request has at most five standard games, 400 plies per game, and 1 MB of PGN. Monthly imports take the last five standard games returned by Chess.com.
-- Stockfish runs on the server with one thread and 32 MB hash. Each position search targets 0.15 seconds, depth at most 12. Jobs have a ten-minute analysis deadline; engine protocol operations have a ten-second timeout. This is a lightweight, approximate analysis suitable for a small beta; it is not equivalent to the unrestricted local depth-15 analysis.
-- Jobs are persisted before execution and survive page refreshes. A crashed job's 15-minute lease expires and it is retried on the next worker poll. Results commit atomically. Identical completed requests are reused per account.
+You assign each person's username and password; visitors cannot register themselves. The app accepts 1–4 configured accounts. Usernames use 3–32 ASCII letters, numbers, underscores or hyphens and are case-insensitive. Passwords have 12–128 characters. Your application username is separate from your Chess.com/Lichess username.
 
-Both Chess.com and Lichess monthly imports are supported. Choose the source and use that platform's username. Lichess imports the five most recent completed standard games in the selected UTC month and does not need an API token. The same per-user quota and private storage apply to both platforms.
-
-## 1. Create the database
-
-Use a managed PostgreSQL database with TLS. Keep its connection string private, and enable the provider's backups before inviting testers. Use a database role scoped to this app's database/schema; it needs permission to create the four `beta_*` tables at first startup. Never use the production database for tests. This repository does not create a hosting or database account for you.
-
-## 2. Choose the app URL and configure Google login
-
-In Google Cloud Console, create/configure an OAuth consent screen and an OAuth client of type **Web application**. For a testing consent screen, add the intended testers. Configure this authorized redirect URI using the exact app URL you select in Community Cloud:
-
-```text
-https://YOUR-APP.streamlit.app/oauth2callback
-```
-
-Copy the client ID and client secret into Community Cloud's Secrets settings, not into GitHub or chat. Configure the same URL as `auth.redirect_uri`. The invitation list is independent of Google test-user enrollment; the user must satisfy both where applicable.
-
-## 3. Deploy
-
-1. Sign into https://share.streamlit.io with access to `pudgepudgehooks/chess_local`.
-2. Create an app from that repository, branch `main`, entry point **beta_app.py**. Use Python **3.11**. Choose an app subdomain and keep it consistent with the OAuth redirect above.
-3. In Advanced settings, paste the structure from [.streamlit/secrets.example.toml](.streamlit/secrets.example.toml), replacing every placeholder. Generate `cookie_secret` locally with `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
-4. Set `beta.allowed_emails` to your Google email and your testers' verified Google emails. Never leave a placeholder in the invite list. Remove an email to revoke its access on the next app rerun. Login cookies may otherwise remain valid until expiry; change the cookie secret to invalidate all sessions.
-5. Deploy. `requirements.txt` installs the Python dependencies; `packages.txt` installs Linux Stockfish at `/usr/games/stockfish`.
-6. If Community Cloud offers app-level sharing restrictions for your account/repository, use them too. The application itself enforces its invitation list even when its landing page is reachable publicly.
-
-No local executable path is entered by visitors. All runtime secrets belong in the deployment's settings. The example secrets file contains no working credentials.
-
-## 4. Verify before invitations
-
-- A signed-out visitor sees only the login page.
-- An uninvited Google account is rejected before any database query or worker startup.
-- Two invited accounts generate different libraries; neither can see the other's jobs or reviews.
-- Generate a short PGN with your exact player header, leave the page, return, and use **Refresh puzzle library** after the job completes.
-- Solve a puzzle, refresh, and confirm the attempt and schedule persist.
-- Confirm PostgreSQL CI checks pass and configure provider backups. Review service logs for failures without sharing credentials.
-
-## Operating limits and recovery
-
-Community Cloud is the web host and runs a small in-process background worker. Its process can sleep, restart, or be stopped when resource limits are reached; this is not an always-on queue service. An invited visitor starts the worker. Persisted queued jobs resume then, and an interrupted running job becomes eligible after its lease expires (up to 15 minutes). A completed job erases its stored PGN payload; failed jobs also erase it. Queued/running jobs temporarily retain PGNs in your database. Puzzle records retain game context needed for review.
-
-Reboot the app after changing database/engine secrets. Database errors fail closed. Users see a generic service error; details appear in owner-accessible logs. No database URL should be copied into bug reports. If the app grows beyond this beta, move `beta_worker.Worker` to a dedicated worker service and keep PostgreSQL as the source of truth.
-
-There is no automated retention/deletion policy for completed job metadata and review events yet. The beta operator should handle account deletion requests by removing that owner's rows from all three data tables, and use a consistent provider backup retention policy. Do not advertise the service as a production public launch yet.
-
-## Tests
+Install the project requirements locally (or use the existing `.deps` installation). For each person, run:
 
 ```powershell
+# Only needed if dependencies were installed in the project's .deps directory:
 $env:PYTHONPATH = "$PWD\.deps"
-python -m unittest discover -s tests -v
+python account_admin.py alice
 ```
 
-PostgreSQL concurrency coverage runs in GitHub Actions against an isolated PostgreSQL service. To run it locally, set `BETA_TEST_DATABASE_URL` to a dedicated test database. Most local storage tests use temporary SQLite files; they do not substitute for the PostgreSQL concurrency check.
+Enter the password you chose when prompted; terminal input is hidden. The helper prints an account configuration section containing a salted Argon2id hash, never the plaintext password. Tell the person their assigned username and password privately.
 
-## References
+## Streamlit Secrets
 
-- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
-- https://docs.streamlit.io/develop/concepts/connections/authentication
-- https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/app-dependencies
+Open **Settings -> Secrets** in Community Cloud. Keep your actual Neon connection URL and add the sections generated by the helper:
+
+```toml
+[beta]
+database_url = "postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
+stockfish_path = "/usr/games/stockfish"
+
+[beta.accounts.alice]
+password_hash = "PASTE-ALICE-GENERATED-HASH"
+
+[beta.accounts.bob]
+password_hash = "PASTE-BOB-GENERATED-HASH"
+```
+
+The placeholders above are not working hashes. Start with one real account and add up to four. Use normal double quotation marks. Never commit working database credentials, passwords or account configuration to GitHub. The tracked `.streamlit/secrets.example.toml` is only a template. Google OAuth, `[auth]`, `allowed_emails`, `invite_codes`, email verification, and self-registration are no longer used. Remove old authentication settings to avoid confusion. Save and reboot the app.
+
+## Login, password resets, and access changes
+
+- Visitors see only **Username**, **Password**, and **Sign in**. Each account has a separate private puzzle library and review history in PostgreSQL.
+- Sessions expire after 12 hours. Tokens stay in server-side Streamlit state and are stored hashed in PostgreSQL; they never appear in URLs, browser local storage or application configuration.
+- A full browser refresh/reconnection or app restart may require signing in again. Puzzle progress persists. Logout revokes the current session. There is no persistent “remember me” cookie.
+- To reset a password, rerun `python account_admin.py alice` and replace Alice's hash in Secrets. Save/reboot. Existing sessions are revoked; the user's stable internal ID and puzzles are retained.
+- To remove access, delete that user's entire `[beta.accounts.username]` section, save and reboot. Sessions are revoked, but their database records and puzzles are retained. Re-adding the same username restores their library, so do not recycle usernames for different people.
+- There is no email or self-service password recovery. The group owner assigns replacement passwords.
+
+Password hashes use Argon2id with 19 MiB memory, two iterations and one parallel lane. Hashes generated by the helper have independent random salts. Login attempts are limited in PostgreSQL: ten per username, 30 per client IP and 100 globally per 15 minutes. Successful logins also count. Clients without an available IP share the `unknown` bucket. These conservative limits suit a few trusted friends, not unrestricted public registration. Use the HTTPS Community Cloud URL and enable backups in the database provider.
+
+## Existing Google data
+
+Old Google-owned puzzle records are not deleted, but new local accounts do not automatically claim them. If Google login was never used, no migration is needed. Otherwise, keep a backup and arrange an administrator-verified ownership migration. A typed username alone must not claim old data.
+
+## Analysis behavior
+
+Chess.com and Lichess monthly imports, PGN uploads, English/Chinese controls, drag-and-drop, and saved review schedules continue to work. The beta allows five standard games/request, 400 plies/game, 1 MB total, six requests/account/day, one active request/account and queue capacity 20. One global Stockfish job runs at a time (one thread, 32 MB hash, requested depth at most 12, 0.15 seconds/position). Jobs have a ten-minute analysis deadline and ten-second engine protocol timeout.
+
+Community Cloud can sleep/restart. A signed-in visitor starts the worker; queued jobs resume, and interrupted jobs recover after their 15-minute lease expires. Finished/failed jobs erase PGN payloads. Other game context, job metadata and review events remain in PostgreSQL; backups and retention/deletion are the administrator's responsibility. Keep the database role scoped to this app. Move analysis to dedicated workers if the application grows.
+
+## Verify
+
+Run `python -m unittest discover -s tests -v`. GitHub Actions adds PostgreSQL concurrency tests. Local tests use temporary SQLite unless `BETA_TEST_DATABASE_URL` points to a separate test database; never use production for tests. Before sharing, verify failed login, logout, password reset/removal, and that two accounts see separate libraries.

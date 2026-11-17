@@ -1,59 +1,103 @@
-"""Private online entry point. Does not load local files or expose engine paths."""
+"""Private beta with administrator-assigned username/password accounts."""
 import logging
 from pathlib import Path
 import shutil
 import streamlit as st
-from beta_auth import owner_for_claims
 from i18n import tr, language_selector, error_text
 
+
 @st.cache_resource
-def services(database_url, stockfish_path):
+def database(url):
     from beta_store import BetaStore
+    return BetaStore(url)
+
+
+@st.cache_resource
+def account_service(url, configured):
+    from beta_auth import Accounts
+    return Accounts(database(url).engine, dict(configured))
+
+
+@st.cache_resource
+def services(url, stockfish_path):
     from beta_worker import Worker
-    store = BetaStore(database_url)
-    return (store, Worker(store, stockfish_path))
+    store = database(url)
+    return store, Worker(store, stockfish_path)
+
+
+def clear_private_state():
+    for key in list(st.session_state):
+        if key != 'ui_language':
+            del st.session_state[key]
+
+
+def account_screen(accounts):
+    st.title(tr('Chess Trainer · Private Beta'))
+    st.write(tr('Sign in with the username and password assigned by your group owner.'))
+    with st.form('account_login', clear_on_submit=True):
+        username = st.text_input(tr('Username'), max_chars=32, key='account_username')
+        password = st.text_input(tr('Password'), type='password', max_chars=128, key='account_password')
+        submitted = st.form_submit_button(tr('Sign in'))
+    st.caption(tr('Need an account or forgot your password? Contact your group owner.'))
+    if submitted:
+        try:
+            token = accounts.login(username, password, st.context.ip_address or 'unknown')
+            clear_private_state()
+            st.session_state.account_token = token
+            st.rerun()
+        except ValueError as exc:
+            st.error(error_text(exc))
+        except Exception:
+            logging.error('Account login unavailable', exc_info=False)
+            st.error(tr('Account service is temporarily unavailable. Please try again later.'))
+
 
 def main():
-    st.set_page_config(page_title='Chess Trainer · Private Beta', page_icon='♟')
+    st.set_page_config(page_title=tr('Chess Trainer · Private Beta'), page_icon='♟')
     language_selector()
     try:
         settings = st.secrets['beta']
-        allowed = list(settings['allowed_emails'])
         url = str(settings['database_url'])
-        if not url.startswith(('postgres://', 'postgresql://', 'postgresql+psycopg://')) or not allowed:
-            raise ValueError('Missing production configuration')
-        if not st.secrets.get('auth'):
-            raise ValueError('Missing authentication configuration')
-    except (KeyError, ValueError, FileNotFoundError):
+        configured = {name: entry['password_hash'] for name, entry in settings['accounts'].items()}
+        from beta_auth import validate_accounts
+        configured = validate_accounts(configured)
+        if not url.startswith(('postgres://', 'postgresql://', 'postgresql+psycopg://')):
+            raise ValueError('Invalid production database URL')
+    except (KeyError, ValueError, TypeError, AttributeError, FileNotFoundError):
         st.error(tr('The private beta is not configured yet. Please contact the beta owner.'))
         st.stop()
-    if not st.user.is_logged_in:
-        st.title(tr('Chess Trainer · Private Beta'))
-        st.write(tr('Sign in with your invited Google account to generate and review your own chess puzzles.'))
-        if st.button(tr('Sign in with Google'), key='beta_login'):
-            st.login()
-        st.stop()
     try:
-        owner = owner_for_claims(dict(st.user), allowed)
-    except PermissionError as exc:
-        st.error(error_text(exc))
-        if st.button(tr('Sign out'), key='beta_denied_logout'):
-            st.logout()
+        accounts = account_service(url, tuple(sorted(configured.items())))
+        accounts.sync()
+        identity = accounts.identity(st.session_state.get('account_token'))
+    except Exception:
+        logging.error('Account database unavailable', exc_info=False)
+        st.error(tr('Account service is temporarily unavailable. Please try again later.'))
         st.stop()
+    if identity is None:
+        if st.session_state.get('account_token'):
+            clear_private_state()
+            st.info(tr('Your session expired. Please sign in again.'))
+        account_screen(accounts)
+        st.stop()
+    owner = identity['id']
     if st.session_state.get('beta_owner') != owner:
-        for key in list(st.session_state):
-            if key != 'ui_language':
-                del st.session_state[key]
+        token = st.session_state.account_token
+        clear_private_state()
+        st.session_state.account_token = token
         st.session_state.beta_owner = owner
     with st.sidebar:
-        st.caption(tr('Private beta · {email}', email=st.user.email))
+        st.caption(tr('Signed in as {username}', username=identity['username']))
+        st.caption(tr('Signed in for up to 12 hours. A full page refresh requires signing in again.'))
         if st.button(tr('Sign out'), key='beta_logout'):
-            st.logout()
+            accounts.logout(st.session_state.account_token)
+            clear_private_state()
+            st.rerun()
     try:
         from chess_analysis import engine_path
         from beta_store import UserLibrary
         path = engine_path(settings.get('stockfish_path', '/usr/games/stockfish'))
-        if not Path(path).is_file() and (not shutil.which(path)):
+        if not Path(path).is_file() and not shutil.which(path):
             raise ValueError('Server engine is not installed')
         store, worker = services(url, path)
     except Exception:
@@ -61,6 +105,12 @@ def main():
         st.error(tr('The beta service is temporarily unavailable. Please contact the beta owner.'))
         st.stop()
     from visualization_all import main as trainer
-    trainer(UserLibrary(store, owner))
+    token = st.session_state.account_token
+    def authorized():
+        current = accounts.identity(token)
+        return current is not None and current['id'] == owner
+    trainer(UserLibrary(store, owner, authorize=authorized))
+
+
 if __name__ == '__main__':
     main()
