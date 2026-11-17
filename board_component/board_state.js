@@ -17,11 +17,11 @@
       this.pendingId = this.handledId = this.uci = null;
       this.busy = this.solved = false;
       this.frames = []; this.index = 0;
-      this.status = 'Drag a piece, or select its square and destination.';
+      this.status = '';
     }
     beginAttempt() {
       if (this.busy || this.solved) return false;
-      this.status = 'Drag a piece, or select its square and destination.';
+      this.status = '';
       return true;
     }
     start(uci, eventId, previews) {

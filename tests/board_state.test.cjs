@@ -16,7 +16,7 @@ assert.equal(session.fen,start,'wrong answer resets the original position');
 assert(!session.busy && !session.solved);
 assert.equal(session.status, 'The answer is incorrect, please try again');
 assert(session.beginAttempt());
-assert.equal(session.status, 'Drag a piece, or select its square and destination.', 'picking up a piece clears previous feedback');
+assert.equal(session.status, '', 'picking up a piece clears previous feedback');
 assert.equal(session.fen, start, 'beginning a retry leaves the starting position intact');
 assert(!session.receive({event_id:'first',status:'incorrect',frames:[]}), 'old response cannot restore a dismissed error');
 assert(session.start('e2e4', 'second', {e2e4:moved}));

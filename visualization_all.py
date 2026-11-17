@@ -195,7 +195,7 @@ def main(repository=None, playback_engine=None):
         if puzzle.get('platform'):
             st.caption(tr('Platform: {platform}', platform=puzzle['platform']))
     key = f"{repository.owner}-{puzzle['id']}" if repository else puzzle['id']
-    st.caption(tr('Drag a piece to make your move. You can also click a piece and its destination.'))
+    st.caption(tr('Drag a piece to make your move.'))
     previous = st.session_state.get('board_feedback', {})
     response = previous.get('response') if previous.get('key') == key else None
     event = drag_board(board, key=f"board-{key}-{cycle['token']}", response=response)

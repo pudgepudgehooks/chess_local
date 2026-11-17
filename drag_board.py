@@ -57,7 +57,7 @@ def drag_board(board, key, response=None):
         } for color in [chess.WHITE, chess.BLACK] for piece in chess.PIECE_TYPES},
         language=language(),
         labels={key: tr(key) for key in [
-            'Chess puzzle board', 'empty', 'Drag a piece, or select its square and destination.',
+            'Chess puzzle board', 'empty',
             'Move submitted. See the result below the board.', 'Illegal move. Try another destination.',
             'Promote to:', 'Queen', 'Rook', 'Bishop', 'Knight', 'Cancel', 'Choose your promotion piece.',
             'Checking move…', 'The answer is incorrect, please try again',
