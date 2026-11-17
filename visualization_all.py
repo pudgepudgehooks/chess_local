@@ -2,7 +2,6 @@
 from datetime import date
 from functools import partial
 import os
-import uuid
 import logging
 import chess
 import chess.engine
@@ -10,7 +9,7 @@ import chess.svg
 import streamlit as st
 from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn, read_games, count_player_moves
 from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library
-from drag_board import drag_board, consume_move
+from drag_board import drag_board, consume_move, playback_frames
 from i18n import tr, language, language_selector, error_text, job_message
 
 def evaluation(value):
@@ -49,7 +48,7 @@ def job_status(repository):
         logging.exception('Job status unavailable')
         st.error(tr('Analysis status is temporarily unavailable.'))
         return
-    for job in recent:
+    for job in recent[:1]:
         st.caption(tr('{state} · {count} games analyzed', state=tr(job['state'].capitalize()), count=job['completed']))
         fraction, label = progress_display(job)
         st.progress(fraction, text=label)
@@ -57,7 +56,7 @@ def job_status(repository):
     if st.button(tr('Refresh puzzle library'), key='refresh_library'):
         st.rerun()
 
-def main(repository=None):
+def main(repository=None, playback_engine=None):
     if repository is None:
         st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
         language_selector()
@@ -161,41 +160,56 @@ def main(repository=None):
             st.caption(tr('Platform: {platform}', platform=puzzle['platform']))
     key = f"{repository.owner}-{puzzle['id']}" if repository else puzzle['id']
     st.caption(tr('Drag a piece to make your move. You can also click a piece and its destination.'))
-    event = drag_board(board, key=f'board-{key}')
+    previous = st.session_state.get('board_feedback', {})
+    response = previous.get('response') if previous.get('key') == key else None
+    event = drag_board(board, key=f'board-{key}', response=response)
     seen = st.session_state.setdefault('board_events', [])
+    new_event = (isinstance(event, dict) and event.get('fen') == board.fen()
+                 and isinstance(event.get('event_id'), str) and bool(event['event_id'])
+                 and event['event_id'] not in seen)
     dragged_move = consume_move(event, board, seen)
-    with st.form(f'answer-{key}'):
-        guess = st.text_input(tr('Your move (SAN or UCI, e.g. Nf3, e2e4, or e7e8q)'), key=f'guess-{key}')
-        submitted = st.form_submit_button(tr('Check move'))
-    if submitted or dragged_move is not None:
+    if new_event:
         move = dragged_move
-    if submitted:
-        try:
-            move = board.parse_san(guess.strip())
-        except ValueError:
-            try:
-                move = board.parse_uci(guess.strip().lower())
-            except ValueError:
-                move = None
-    if submitted or dragged_move is not None:
+        result = {'event_id': event['event_id'], 'status': 'incorrect', 'frames': []}
+        message = 'Try again. The position has been reset.'
         if move is None:
-            st.error(tr('Enter a legal move. Include the promotion piece when promoting.'))
+            result['status'] = 'incorrect'
         else:
             correct = move.uci() in puzzle.get('accepted_moves', [puzzle['best_move']])
             try:
                 if repository:
-                    event_id = event['event_id'] if dragged_move is not None and (not submitted) else uuid.uuid4().hex
-                    puzzle.update(repository.review(puzzle, correct, event_id))
+                    puzzle.update(repository.review(puzzle, correct, event['event_id']))
                 else:
                     record_review(puzzle, correct)
                     save_library(library)
                 if correct:
-                    st.success(tr('Correct! Review saved. Choose Next puzzle when ready.'))
-                else:
-                    st.error(tr('That move loses more than the accepted alternatives. Try again.'))
+                    result['status'] = 'correct'
+                    try:
+                        executable = playback_engine
+                        if not executable:
+                            try:
+                                executable = engine_path(st.session_state.get('analysis_engine') or None)
+                            except ValueError:
+                                executable = None
+                        result['frames'] = playback_frames(board, move, puzzle, executable)
+                    except Exception:
+                        logging.exception('Solution continuation unavailable')
+                        result['frames'] = playback_frames(board, move, puzzle)
+                    message = 'Correct! Watch the continuation.'
+                    if len(result['frames']) == 1 and not chess.Board(result['frames'][0]['fen']).is_game_over():
+                        message = 'Correct! No continuation is available for this position.'
             except Exception as exc:
                 logging.exception('Review save failed')
-                st.error(tr('Could not save your review. Please try again.') if repository else tr('Could not save review: {error}', error=error_text(exc)))
+                result['status'] = 'error'
+                message = 'Could not save your review. Please try again.'
+        result['message'] = message
+        st.session_state.board_feedback = {'key': key, 'response': result}
+        st.rerun()
+    if response:
+        if response['status'] == 'correct':
+            st.success(tr(response['message']))
+        else:
+            st.error(tr(response['message']))
     if st.button(tr('Hint'), key=f'hint-{key}'):
         best = chess.Move.from_uci(puzzle['best_move'])
         st.info(tr('Look at the {piece} on {square}.', piece=tr(chess.piece_name(board.piece_type_at(best.from_square))), square=chess.square_name(best.from_square)))

@@ -109,7 +109,7 @@ def main():
     def authorized():
         current = accounts.identity(token)
         return current is not None and current['id'] == owner
-    trainer(UserLibrary(store, owner, authorize=authorized))
+    trainer(UserLibrary(store, owner, authorize=authorized), playback_engine=path)
 
 
 if __name__ == '__main__':

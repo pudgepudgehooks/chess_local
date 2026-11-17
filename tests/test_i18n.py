@@ -42,14 +42,14 @@ class LanguageTests(unittest.TestCase):
             save.assert_not_called()
 
     def test_chinese_answer_validation(self):
-        app = self.app()
-        app.query_params['lang'] = 'zh'
-        app.run(timeout=30)
-        self.assertFalse(app.exception)
-        next(t for t in app.text_input if t.label.startswith('你的着法')).set_value('invalid')
-        next(b for b in app.button if b.label == '检查着法').click()
-        app.run()
-        self.assertTrue(any('合法着法' in e.value for e in app.error))
+        from puzzle_store import load_library
+        puzzle = load_library()['puzzles'][0]
+        with patch('drag_board.drag_board', return_value={'fen': puzzle['fen'], 'uci': '0000', 'event_id': 'invalid-zh'}):
+            app = self.app()
+            app.query_params['lang'] = 'zh'
+            app.run(timeout=30)
+            self.assertFalse(app.exception)
+            self.assertTrue(any('请再试一次' in e.value for e in app.error))
 
     def test_beta_switch_before_login(self):
         import tempfile

@@ -176,6 +176,8 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
                 'id': hashlib.sha256(identity.encode()).hexdigest()[:24],
                 'username': username.strip(), 'fen': fen, 'played': move.uci(),
                 'best_move': best['pv'][0].uci(), 'accepted_moves': accepted,
+                'accepted_lines': {line['pv'][0].uci(): [m.uci() for m in line['pv'][:10]]
+                                   for line in lines if line['pv'][0].uci() in accepted},
                 'solution': [m.uci() for m in best['pv'][:10]],
                 'loss': loss, 'kind': kind, 'before': score_data(before),
                 'after': score_data(after), 'color': 'white' if color else 'black',

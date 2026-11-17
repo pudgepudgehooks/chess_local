@@ -3,6 +3,13 @@ import re
 import streamlit as st
 
 ZH = {
+    'Checking move…': '正在检查着法……',
+    'Try again. The position has been reset.': '请再试一次，棋盘已恢复原位。',
+    'Correct! Watch the continuation.': '回答正确！请观看后续着法演示。',
+    'Solution complete. Choose Next puzzle.': '演示结束，请选择下一题。',
+    'Replay solution': '重新播放',
+    'Step {step}/{total}: {move}': '第 {step}/{total} 步：{move}',
+    'Correct! No continuation is available for this position.': '回答正确！此局面暂无可用的后续着法。',
     'Game {game}/{games} · Your moves analyzed: {done}/{total} · {percent}%': '第 {game}/{games} 局 · 已分析你的着法：{done}/{total} · {percent}%',
     'Analysis complete · 100%': '分析完成 · 100%',
     'Queued · Waiting for the engine': '排队中 · 等待引擎分析',

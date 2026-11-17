@@ -72,7 +72,7 @@ class StoredProgressTests(unittest.TestCase):
 
 
 class ProgressUITests(unittest.TestCase):
-    def test_running_queued_failed_and_completed_bars(self):
+    def test_only_latest_job_is_shown_with_localized_progress(self):
         from streamlit.testing.v1 import AppTest
         jobs = [
             dict(state='running', completed=0, message='Analyzing games', game_index=1,
@@ -86,12 +86,23 @@ class ProgressUITests(unittest.TestCase):
             app = AppTest.from_string(code).run(timeout=30)
             self.assertFalse(app.exception)
             bars = app.get('progress')
-            self.assertEqual([bar.proto.value for bar in bars], [25, 0, 25, 100])
+            self.assertEqual([bar.proto.value for bar in bars], [25])
             self.assertIn('5/20', bars[0].proto.text)
             app.session_state.ui_language = 'zh'
             app.run()
             self.assertFalse(app.exception)
             self.assertIn('已分析你的着法', app.get('progress')[0].proto.text)
+
+    def test_only_newest_completed_message_is_visible(self):
+        from streamlit.testing.v1 import AppTest
+        jobs = [dict(state='done', completed=1, message='Added 7 puzzles. Refresh your library to review them.'),
+                dict(state='done', completed=1, message='Added 3 puzzles. Refresh your library to review them.')]
+        with patch('beta_store.UserLibrary.recent_jobs', return_value=jobs):
+            app = AppTest.from_string("from visualization_all import job_status\nfrom beta_store import UserLibrary\njob_status(UserLibrary(None, 'alice'))").run(timeout=30)
+            self.assertEqual(len(app.get('progress')), 1)
+            text = ' '.join(item.value for item in app.markdown)
+            self.assertIn('Added 7 puzzles', text)
+            self.assertNotIn('Added 3 puzzles', text)
 
     def test_saving_stays_below_100_percent(self):
         from visualization_all import progress_display
