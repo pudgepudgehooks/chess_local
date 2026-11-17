@@ -45,11 +45,12 @@ class TrainerUITests(unittest.TestCase):
             first = library['puzzles'][0]
             component.return_value = {'fen': first['fen'], 'uci': '0000', 'event_id': 'invalid'}
             app.run()
-            self.assertTrue(app.error)
+            self.assertFalse(app.error)
+            self.assertEqual(component.call_args.kwargs['response']['message'], 'The answer is incorrect, please try again')
             save.assert_not_called()
             component.return_value = {'fen': first['fen'], 'uci': first['played'], 'event_id': 'wrong'}
             app.run()
-            self.assertTrue(app.error)
+            self.assertFalse(app.error, 'board feedback must not leave a persistent error banner')
             self.assertEqual(component.call_args.kwargs['response']['status'], 'incorrect')
             self.assertEqual(component.call_args.kwargs['response']['frames'], [])
             component.return_value = {'fen': first['fen'], 'uci': first['best_move'], 'event_id': 'correct'}

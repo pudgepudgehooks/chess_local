@@ -19,6 +19,11 @@
       this.frames = []; this.index = 0;
       this.status = 'Drag a piece, or select its square and destination.';
     }
+    beginAttempt() {
+      if (this.busy || this.solved) return false;
+      this.status = 'Drag a piece, or select its square and destination.';
+      return true;
+    }
     start(uci, eventId, previews) {
       if (this.busy || this.solved || !previews[uci]) return false;
       this.fen = previews[uci]; this.uci = uci; this.pendingId = eventId;
@@ -34,7 +39,7 @@
       this.busy = this.solved && this.frames.length > 1;
       this.fen = this.solved ? this.frames[0].fen : this.originalFen;
       this.uci = this.solved ? this.frames[0].uci : null;
-      this.status = response.message || (this.solved ? 'Correct! Watch the continuation.' : 'Try again. The position has been reset.');
+      this.status = response.message || (this.solved ? 'Correct! Watch the continuation.' : 'The answer is incorrect, please try again');
       return true;
     }
     advance() {
@@ -42,7 +47,7 @@
       this.index++;
       this.fen = this.frames[this.index].fen; this.uci = this.frames[this.index].uci;
       this.busy = this.index + 1 < this.frames.length;
-      if (!this.busy) this.status = 'Solution complete. Choose Next puzzle.';
+      if (!this.busy) this.status = 'Click Next Puzzle to proceed.';
       return true;
     }
     replay() {

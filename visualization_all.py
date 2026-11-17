@@ -171,7 +171,7 @@ def main(repository=None, playback_engine=None):
     if new_event:
         move = dragged_move
         result = {'event_id': event['event_id'], 'status': 'incorrect', 'frames': []}
-        message = 'Try again. The position has been reset.'
+        message = 'The answer is incorrect, please try again'
         if move is None:
             result['status'] = 'incorrect'
         else:
@@ -208,8 +208,8 @@ def main(repository=None, playback_engine=None):
     if response:
         if response['status'] == 'correct':
             st.success(tr(response['message']))
-        else:
-            st.error(tr(response['message']))
+        # Incorrect-answer feedback lives on the board so it can clear instantly
+        # when the user picks up a piece for their next attempt.
     if st.button(tr('Hint'), key=f'hint-{key}'):
         best = chess.Move.from_uci(puzzle['best_move'])
         st.info(tr('Look at the {piece} on {square}.', piece=tr(chess.piece_name(board.piece_type_at(best.from_square))), square=chess.square_name(best.from_square)))

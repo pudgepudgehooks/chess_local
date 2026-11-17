@@ -44,12 +44,15 @@ class LanguageTests(unittest.TestCase):
     def test_chinese_answer_validation(self):
         from puzzle_store import load_library
         puzzle = load_library()['puzzles'][0]
-        with patch('drag_board.drag_board', return_value={'fen': puzzle['fen'], 'uci': '0000', 'event_id': 'invalid-zh'}):
+        with patch('drag_board.drag_board', return_value={'fen': puzzle['fen'], 'uci': '0000', 'event_id': 'invalid-zh'}) as component:
             app = self.app()
             app.query_params['lang'] = 'zh'
             app.run(timeout=30)
             self.assertFalse(app.exception)
-            self.assertTrue(any('请再试一次' in e.value for e in app.error))
+            from i18n import tr
+            self.assertFalse(app.error)
+            with patch('i18n.language', return_value='zh'):
+                self.assertIn('请再试一次', tr(component.call_args.kwargs['response']['message']))
 
     def test_beta_switch_before_login(self):
         import tempfile

@@ -4,9 +4,9 @@ import streamlit as st
 
 ZH = {
     'Checking move…': '正在检查着法……',
-    'Try again. The position has been reset.': '请再试一次，棋盘已恢复原位。',
+    'The answer is incorrect, please try again': '答案不正确，请再试一次。',
     'Correct! Watch the continuation.': '回答正确！请观看后续着法演示。',
-    'Solution complete. Choose Next puzzle.': '演示结束，请选择下一题。',
+    'Click Next Puzzle to proceed.': '点击下一题以继续。',
     'Replay solution': '重新播放',
     'Step {step}/{total}: {move}': '第 {step}/{total} 步：{move}',
     'Correct! No continuation is available for this position.': '回答正确！此局面暂无可用的后续着法。',

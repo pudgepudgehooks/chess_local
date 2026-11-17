@@ -33,7 +33,7 @@ function render() {
   }
   highlights();
   status.textContent = t(session.status);
-  if (session.solved && session.frames.length > 1) {
+  if (session.solved && session.busy && session.frames.length > 1) {
     status.textContent += ' '+t('Step {step}/{total}: {move}', {step:session.index+1, total:session.frames.length, move:session.frames[session.index].san});
   }
   replay.hidden = !session.solved || session.frames.length < 2;
@@ -86,7 +86,11 @@ function attempt(from, to) {
 function select(square) {
   if (session.busy || session.solved) return;
   if (selected && selected !== square) { attempt(selected,square); return; }
-  if (args.pieces[square]?.own) { selected=selected===square ? null : square; promotion.hidden=true; highlights(); }
+  if (args.pieces[square]?.own) {
+    session.beginAttempt();
+    selected=selected===square ? null : square; promotion.hidden=true;
+    status.textContent=t(session.status); highlights();
+  }
 }
 board.addEventListener('click', e => {
   if (suppressClick) { suppressClick=false; return; }
@@ -96,6 +100,7 @@ board.addEventListener('pointerdown', e => {
   if (session.busy || session.solved) return;
   const square=e.target.closest('[data-square]'); if (!square || e.button !== 0) return;
   const from=square.dataset.square; if (!args.pieces[from]?.own) return;
+  session.beginAttempt(); status.textContent=t(session.status);
   drag={from,x:e.clientX,y:e.clientY,moved:false,id:e.pointerId}; board.setPointerCapture(e.pointerId);
 });
 board.addEventListener('pointermove', e => {
