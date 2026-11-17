@@ -13,6 +13,7 @@ from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_
 from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library, puzzle_month, meets_review_loss
 from drag_board import drag_board, consume_move, playback_frames
 from i18n import tr, language, language_selector, error_text, job_message
+from trainer_guide import show_guide
 
 def evaluation(value):
     if not value:
@@ -73,6 +74,14 @@ def main(repository=None, playback_engine=None):
         st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
         language_selector()
     st.title(tr('Chess Mistake Trainer'))
+    review_tab, guide_tab = st.tabs([tr('Practice'), tr('How it works')])
+    with guide_tab:
+        show_guide(online=repository is not None)
+    with review_tab:
+        trainer(repository, playback_engine)
+
+
+def trainer(repository=None, playback_engine=None):
     try:
         library = repository.load() if repository else load_library()
     except Exception as exc:

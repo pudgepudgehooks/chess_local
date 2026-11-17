@@ -32,6 +32,8 @@ Use `--engine 'C:\path\to\stockfish.exe'` instead of the environment variable if
 
 ## Review and storage
 
+Open the **How it works** tab beside **Practice** for an English or Simplified Chinese guide to generating puzzles, saved-library filters, board controls, review cycles, review scheduling, and the relevant local or online setup. Your practice queue and filters stay in place while using the guide.
+
 During analysis, the progress bar shows the current game, the number of your moves examined across the batch, and the completion percentage. In the online beta it refreshes automatically every three seconds, including after you leave and return. It reaches 100% only once the puzzles have been saved. Progress is based on moves examined rather than an estimate of remaining time; some positions take longer than others.
 
 For Lichess, choose **Lichess month**, enter your Lichess username and a year/month. Public, completed standard games are downloaded newest first using UTC month boundaries; no Lichess password or API token is needed. Local imports default to 20 games (maximum 100); the online beta imports at most five. Variant and ongoing games are excluded. If Lichess rate limits a request, wait at least a minute before retrying. Existing analysis, drag-and-drop, and review scheduling work with either platform. API reference: https://lichess.org/api#tag/Games/operation/apiGamesUser
