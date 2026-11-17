@@ -46,6 +46,8 @@ Answers are entered through the board only. New puzzles store continuations for 
 
 Each review cycle visits the selected puzzles once. After the last puzzle, choose **Take a rest** or **Start over with shuffled puzzles**. Starting over repeats the same puzzles in a new random order, including puzzles scheduled for a later review, without clearing saved progress. The board starts fresh for each round. Changing the owner or due-only filter begins a new cycle. In the online beta, **Update puzzle library** reloads saved puzzles and begins a new cycle using the current filters.
 
+Use **Saved game month** to review one month, such as `2026-08`, or choose **All months**. Months come from the saved game's date, not the date you generated the puzzles. Undated samples and PGNs with an unknown month appear under **Unknown date**. Changing the month starts a new cycle limited to that month; shuffled restarts stay within it. Switching months keeps all saved puzzles and review history. Turn off the due-only filter to revisit a month's puzzles before their next scheduled review.
+
 Old visualization entry points launch the same draggable trainer. The trainer does not need the optional API.
 
 ## Optional API

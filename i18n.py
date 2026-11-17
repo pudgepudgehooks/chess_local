@@ -3,6 +3,10 @@ import re
 import streamlit as st
 
 ZH = {
+    'Saved game month': '已保存棋谱的月份',
+    'All months': '所有月份',
+    'Unknown date': '日期未知',
+    'Filter by the month the game was played. Your saved puzzles and progress are kept.': '按对局发生的月份筛选，已保存的题目和复习进度会保留。',
     'Checking move…': '正在检查着法……',
     'The answer is incorrect, please try again': '答案不正确，请再试一次。',
     'Correct! Watch the continuation.': '回答正确！请观看后续着法演示。',

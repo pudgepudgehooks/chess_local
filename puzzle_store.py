@@ -2,10 +2,20 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 LIBRARY_PATH = ROOT / 'puzzles.json'
+
+
+def puzzle_month(puzzle):
+    """Group saved puzzles by game month, including PGNs with an unknown day."""
+    value = puzzle.get('date')
+    match = re.fullmatch(r'([0-9]{4})([.-])([0-9]{2})(?:\2(?:[0-9]{2}|\?\?))?', value.strip()) if isinstance(value, str) else None
+    if not match or int(match[1]) == 0 or not 1 <= int(match[3]) <= 12:
+        return 'Unknown date'
+    return f'{match[1]}-{match[3]}'
 
 
 def load_library(path=LIBRARY_PATH):

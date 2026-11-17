@@ -10,7 +10,7 @@ import chess.engine
 import chess.svg
 import streamlit as st
 from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn, read_games, count_player_moves
-from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library
+from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library, puzzle_month
 from drag_board import drag_board, consume_move, playback_frames
 from i18n import tr, language, language_selector, error_text, job_message
 
@@ -153,14 +153,24 @@ def main(repository=None, playback_engine=None):
     due_only = st.checkbox(tr('Only show puzzles due for review'), value=True, key='due_only')
     names = sorted({p['username'] for p in library['puzzles'] if p.get('username')})
     player = st.selectbox(tr('Puzzle owner'), ['All players'] + names, format_func=lambda value, all_label=tr('All players'): all_label if value == 'All players' else value, key='puzzle_player')
-    filter_key = (due_only, player)
+    owned = [p for p in library['puzzles'] if player == 'All players' or p.get('username') == player]
+    months = {puzzle_month(p) for p in owned}
+    month_options = ['All months'] + sorted(months - {'Unknown date'}, reverse=True)
+    if 'Unknown date' in months:
+        month_options.append('Unknown date')
+    if st.session_state.get('review_month', 'All months') not in month_options:
+        st.session_state.review_month = 'All months'
+    month = st.selectbox(tr('Saved game month'), month_options,
+                         format_func=partial(tr, _language=language()), key='review_month')
+    st.caption(tr('Filter by the month the game was played. Your saved puzzles and progress are kept.'))
+    filter_key = (due_only, player, month)
     if st.session_state.get('review_filter') != filter_key:
         st.session_state.review_filter = filter_key
         st.session_state.pop('active_id', None)
         st.session_state.pop('review_cycle', None)
         st.session_state.pop('board_feedback', None)
-    available = {p['id']: p for p in library['puzzles']
-                 if player == 'All players' or p.get('username') == player}
+    available = {p['id']: p for p in owned
+                 if month == 'All months' or puzzle_month(p) == month}
     cycle = st.session_state.get('review_cycle')
     if cycle is None:
         cycle = {'ids': [pid for pid, p in available.items() if not due_only or is_due(p)],
