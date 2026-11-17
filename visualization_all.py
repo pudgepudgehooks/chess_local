@@ -185,6 +185,7 @@ def main(repository=None, playback_engine=None):
     if cycle['state'] in ('complete', 'rest'):
         st.session_state.active_id = None
         st.success(tr('Cycle complete! Take a rest or practice your mistakes again.'))
+        st.caption(tr('Or you can select another month to review.'))
         if cycle['state'] == 'rest':
             st.info(tr('Enjoy your break. Your progress is saved. Start over whenever you are ready.'))
         elif st.button(tr('Take a rest'), key='rest_cycle'):

@@ -104,6 +104,7 @@ ZH = {
     'Analysis failed or reached its time limit. Please try fewer games. Contact the beta owner if it repeats.': '分析失败或超时。请减少棋谱数量后重试。如反复出现，请联系内测管理员。',
     'Update puzzle library': '更新题库',
     'Cycle complete! Take a rest or practice your mistakes again.': '本轮练习已完成！休息一下，或再练习一轮错题。',
+    'Or you can select another month to review.': '或者，你可以选择其他月份进行复习。',
     'Take a rest': '休息一下',
     'Start over with shuffled puzzles': '打乱顺序重新练习',
     'Enjoy your break. Your progress is saved. Start over whenever you are ready.': '好好休息！你的进度已保存，准备好后可重新开始。',
