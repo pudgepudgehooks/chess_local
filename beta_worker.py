@@ -6,7 +6,7 @@ import threading
 import time
 
 import chess.engine
-from chess_analysis import analyze_game, read_games
+from chess_analysis import analyze_game, read_games, count_player_moves
 
 LOG = logging.getLogger(__name__)
 MAX_BYTES = 1024 * 1024
@@ -43,12 +43,30 @@ def run_job(store, job, path):
         payload = validate_payload(**json.loads(job['payload']))
         deadline = time.monotonic() + 600
         found = []
+        games = [g for text in payload['texts'] for g in read_games(text)]
+        totals = [count_player_moves(game, payload['username']) for game in games]
+        total_positions = sum(totals)
+        store.progress(job, 0, games_total=len(games), game_index=0,
+                       positions_done=0, positions_total=total_positions)
+        completed_positions = 0
+        last_write = 0
         with chess.engine.SimpleEngine.popen_uci(path, timeout=10) as engine:
             engine.configure({'Threads': 1, 'Hash': 32})
-            for count, game in enumerate((g for t in payload['texts'] for g in read_games(t)), 1):
+            for count, game in enumerate(games, 1):
+                def report(done, total):
+                    nonlocal last_write
+                    now = time.monotonic()
+                    # Persist often enough for the UI without a DB write for every fast search.
+                    if done == 0 or done == total or now - last_write >= 1:
+                        store.progress(job, count if done == total else count - 1,
+                            games_total=len(games), game_index=count,
+                            positions_done=completed_positions + done, positions_total=total_positions)
+                        last_write = now
                 found.extend(analyze_game(game, payload['username'], engine, payload['depth'],
-                    payload['threshold'], position_time=0.15, deadline=deadline))
-                store.progress(job, count)
+                    payload['threshold'], position_time=0.15, deadline=deadline, on_progress=report))
+                completed_positions += totals[count - 1]
+                store.progress(job, count, games_total=len(games), game_index=count,
+                               positions_done=completed_positions, positions_total=total_positions)
         store.finish(job, found)
     except Exception:
         LOG.exception('Analysis job %s failed', job['id'])

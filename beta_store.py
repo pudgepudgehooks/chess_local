@@ -23,6 +23,10 @@ jobs = Table('beta_jobs', meta,
     Column('lease', Float, nullable=False, default=0), Column('token', String(64)),
     Column('completed', Integer, nullable=False, default=0), Column('message', Text, nullable=False, default=''))
 guard = Table('beta_queue_guard', meta, Column('id', Integer, primary_key=True))
+job_progress = Table('beta_job_progress', meta,
+    Column('job_id', String(64), primary_key=True),
+    Column('games_total', Integer, nullable=False), Column('game_index', Integer, nullable=False),
+    Column('positions_done', Integer, nullable=False), Column('positions_total', Integer, nullable=False))
 
 
 class BetaStore:
@@ -87,7 +91,10 @@ class BetaStore:
 
     def recent_jobs(self, owner):
         with self.engine.connect() as db:
-            rows = db.execute(select(jobs.c.id, jobs.c.state, jobs.c.completed, jobs.c.message).where(
+            rows = db.execute(select(jobs.c.id, jobs.c.state, jobs.c.completed, jobs.c.message,
+                job_progress.c.games_total, job_progress.c.game_index,
+                job_progress.c.positions_done, job_progress.c.positions_total).select_from(
+                jobs.outerjoin(job_progress, jobs.c.id == job_progress.c.job_id)).where(
                 jobs.c.owner == owner).order_by(jobs.c.created.desc()).limit(5))
             return [dict(r._mapping) for r in rows]
 
@@ -103,13 +110,23 @@ class BetaStore:
                 return None
             token = uuid.uuid4().hex
             db.execute(update(jobs).where(jobs.c.id == row['id']).values(
-                state='running', token=token, lease=now + 900, message='Analyzing games'))
+                state='running', token=token, lease=now + 900, message='Analyzing games', completed=0))
+            db.execute(job_progress.delete().where(job_progress.c.job_id == row['id']))
             return dict(row, token=token)
 
-    def progress(self, job, count):
+    def progress(self, job, count, *, games_total=None, game_index=None, positions_done=None, positions_total=None):
         with self.engine.begin() as db:
-            db.execute(update(jobs).where(jobs.c.id == job['id'], jobs.c.token == job['token'],
+            result = db.execute(update(jobs).where(jobs.c.id == job['id'], jobs.c.token == job['token'],
                 jobs.c.state == 'running').values(completed=count))
+            if not result.rowcount or games_total is None:
+                return
+            details = dict(games_total=games_total, game_index=game_index,
+                           positions_done=positions_done, positions_total=positions_total)
+            previous = db.execute(select(job_progress.c.job_id).where(job_progress.c.job_id == job['id'])).first()
+            if previous:
+                db.execute(update(job_progress).where(job_progress.c.job_id == job['id']).values(**details))
+            else:
+                db.execute(job_progress.insert().values(job_id=job['id'], **details))
 
     def finish(self, job, found, error=None):
         with self.engine.begin() as db:

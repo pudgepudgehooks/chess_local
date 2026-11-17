@@ -8,7 +8,7 @@ import chess
 import chess.engine
 import chess.svg
 import streamlit as st
-from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn, read_games
+from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn, read_games, count_player_moves
 from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library
 from drag_board import drag_board, consume_move
 from i18n import tr, language, language_selector, error_text, job_message
@@ -17,6 +17,29 @@ def evaluation(value):
     if not value:
         return tr('unavailable')
     return tr('mate {mate}', mate=value['mate']) if value.get('mate') is not None else tr('{cp} pawns', cp=f"{value['cp'] / 100:+.2f}")
+
+
+def analysis_progress_text(game, games, done, total, fraction):
+    return tr('Game {game}/{games} · Your moves analyzed: {done}/{total} · {percent}%',
+              game=game, games=games, done=done, total=total, percent=int(fraction * 100))
+
+
+def progress_display(job):
+    """Never advertise 100% until the puzzles have committed successfully."""
+    if job['state'] == 'done':
+        return 1.0, tr('Analysis complete · 100%')
+    total = job.get('positions_total') or 0
+    done = job.get('positions_done') or 0
+    fraction = min(0.99, max(0, done / total)) if total else 0.0
+    if job['state'] == 'queued':
+        return 0.0, tr('Queued · Waiting for the engine')
+    if job['state'] == 'failed':
+        return fraction, tr('Analysis stopped before completion')
+    if total and done >= total:
+        return fraction, tr('Saving puzzles…')
+    if not job.get('game_index'):
+        return fraction, tr('Preparing analysis…')
+    return fraction, analysis_progress_text(job['game_index'], job['games_total'], done, total, fraction)
 
 @st.fragment(run_every=3)
 def job_status(repository):
@@ -28,6 +51,8 @@ def job_status(repository):
         return
     for job in recent:
         st.caption(tr('{state} · {count} games analyzed', state=tr(job['state'].capitalize()), count=job['completed']))
+        fraction, label = progress_display(job)
+        st.progress(fraction, text=label)
         st.write(job_message(job['message']))
     if st.button(tr('Refresh puzzle library'), key='refresh_library'):
         st.rerun()
@@ -89,13 +114,22 @@ def main(repository=None):
                     else:
                         games = [game for text in texts for game in read_games(text)]
                         found = []
-                        progress = st.progress(0)
+                        total_positions = sum(count_player_moves(game, username) for game in games)
+                        completed_positions = 0
+                        progress = st.progress(0, text=tr('Preparing analysis…'))
                         with chess.engine.SimpleEngine.popen_uci(path) as engine:
                             for i, game in enumerate(games):
-                                found.extend(analyze_game(game, username, engine, depth, threshold))
-                                progress.progress((i + 1) / len(games))
+                                def report(done, total):
+                                    completed = completed_positions + done
+                                    fraction = min(0.99, completed / total_positions) if total_positions else 0.0
+                                    label = analysis_progress_text(i + 1, len(games), completed, total_positions, fraction)
+                                    progress.progress(fraction, text=label)
+                                found.extend(analyze_game(game, username, engine, depth, threshold, on_progress=report))
+                                completed_positions += count_player_moves(game, username)
+                        progress.progress(0.99, text=tr('Saving puzzles…'))
                         added = merge_puzzles(library, found)
                         save_library(library)
+                        progress.progress(1.0, text=tr('Analysis complete · 100%'))
                 st.success(tr('Analysis queued (or already analyzed). You can leave and return later.') if repository else tr('Analyzed {games} games. Added {added} puzzles.', games=len(games), added=added))
             except Exception as exc:
                 logging.exception('Puzzle generation request failed')

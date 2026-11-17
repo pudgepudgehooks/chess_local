@@ -99,8 +99,24 @@ def score_data(score):
     return {'cp': score.score(), 'mate': score.mate()}
 
 
+def count_player_moves(game, username):
+    """Number of this player's positions that the engine will examine."""
+    name = username.strip().casefold()
+    if game.headers.get('White', '').casefold() == name:
+        color = chess.WHITE
+    elif game.headers.get('Black', '').casefold() == name:
+        color = chess.BLACK
+    else:
+        return 0
+    board = game.board()
+    if board.chess960 or type(board) is not chess.Board:
+        return 0
+    offset = 0 if board.turn == color else 1
+    return sum(1 for index, _ in enumerate(game.mainline_moves()) if index % 2 == offset)
+
+
 def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
-                 position_time=None, deadline=None):
+                 position_time=None, deadline=None, on_progress=None):
     name = username.strip().casefold()
     if not name:
         raise ValueError('Enter the username whose mistakes you want to study.')
@@ -114,6 +130,10 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
     if board.chess960 or type(board) is not chess.Board:
         return []
     puzzles = []
+    total = count_player_moves(game, username)
+    completed = 0
+    if on_progress:
+        on_progress(0, total)
     for move in game.mainline_moves():
         if deadline is not None and time.monotonic() >= deadline:
             raise TimeoutError('Analysis time limit reached')
@@ -125,6 +145,9 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
         lines = [line for line in lines if line.get('pv')]
         if not lines:
             board.push(move)
+            completed += 1
+            if on_progress:
+                on_progress(completed, total)
             continue
         best = lines[0]
         before = best['score'].pov(color)
@@ -162,6 +185,9 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
                             'Chess.com' if (urlparse(source).hostname or '').endswith('.chess.com') or urlparse(source).hostname == 'chess.com' else 'PGN',
                 'move_number': board.fullmove_number, 'depth': depth})
         board.push(move)
+        completed += 1
+        if on_progress:
+            on_progress(completed, total)
     return puzzles
 
 

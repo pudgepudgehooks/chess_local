@@ -3,6 +3,12 @@ import re
 import streamlit as st
 
 ZH = {
+    'Game {game}/{games} · Your moves analyzed: {done}/{total} · {percent}%': '第 {game}/{games} 局 · 已分析你的着法：{done}/{total} · {percent}%',
+    'Analysis complete · 100%': '分析完成 · 100%',
+    'Queued · Waiting for the engine': '排队中 · 等待引擎分析',
+    'Analysis stopped before completion': '分析未完成，已停止',
+    'Preparing analysis…': '正在准备分析……',
+    'Saving puzzles…': '正在保存练习题……',
     'Sign in with the username and password assigned by your group owner.': '请使用群组管理员分配的用户名和密码登录。',
     'Need an account or forgot your password? Contact your group owner.': '需要账号或忘记密码？请联系群组管理员。',
     'Signed in as {username}': '当前账号：{username}',
