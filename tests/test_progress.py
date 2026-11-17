@@ -75,7 +75,7 @@ class ProgressUITests(unittest.TestCase):
     def test_only_latest_job_is_shown_with_localized_progress(self):
         from streamlit.testing.v1 import AppTest
         jobs = [
-            dict(state='running', completed=0, message='Analyzing games', game_index=1,
+            dict(id='current', state='running', completed=0, message='Analyzing games', game_index=1,
                  games_total=2, positions_done=5, positions_total=20),
             dict(state='queued', completed=0, message='Waiting for analysis'),
             dict(state='failed', completed=0, message='Failed', positions_done=5, positions_total=20),
@@ -95,10 +95,14 @@ class ProgressUITests(unittest.TestCase):
 
     def test_only_newest_completed_message_is_visible(self):
         from streamlit.testing.v1 import AppTest
-        jobs = [dict(state='done', completed=1, message='Added 7 puzzles. Refresh your library to review them.'),
-                dict(state='done', completed=1, message='Added 3 puzzles. Refresh your library to review them.')]
+        jobs = [dict(id='new', state='done', completed=1, message='Added 7 puzzles. Refresh your library to review them.'),
+                dict(id='old', state='done', completed=1, message='Added 3 puzzles. Refresh your library to review them.')]
         with patch('beta_store.UserLibrary.recent_jobs', return_value=jobs):
             app = AppTest.from_string("from visualization_all import job_status\nfrom beta_store import UserLibrary\njob_status(UserLibrary(None, 'alice'))").run(timeout=30)
+            self.assertEqual(len(app.get('progress')), 0, 'past completion must stay hidden on login')
+            self.assertNotIn('Added 7 puzzles', ' '.join(item.value for item in app.markdown))
+            app.session_state.analysis_status_job = ('alice', 'new')
+            app.run()
             self.assertEqual(len(app.get('progress')), 1)
             text = ' '.join(item.value for item in app.markdown)
             self.assertIn('Added 7 puzzles', text)
@@ -112,6 +116,26 @@ class ProgressUITests(unittest.TestCase):
             self.assertNotIn('review_cycle', app.session_state)
             self.assertNotIn('active_id', app.session_state)
             self.assertNotIn('board_feedback', app.session_state)
+
+    def test_running_job_completion_is_shown_only_in_observing_session(self):
+        from streamlit.testing.v1 import AppTest
+        job = dict(id='active', state='running', completed=0, message='Analyzing games',
+                   positions_done=1, positions_total=2)
+        code = "from visualization_all import job_status\nfrom beta_store import UserLibrary\njob_status(UserLibrary(None, 'alice'))"
+        with patch('beta_store.UserLibrary.recent_jobs', return_value=[job]):
+            app = AppTest.from_string(code).run(timeout=30)
+            self.assertEqual(len(app.get('progress')), 1)
+            job.update(state='done', completed=1,
+                       message='Added 8 puzzles. Refresh your library to review them.')
+            app.run()
+            self.assertIn('Analysis complete', app.get('progress')[0].proto.text)
+            self.assertIn('Added 8 puzzles', ' '.join(item.value for item in app.markdown))
+            fresh = AppTest.from_string(code).run(timeout=30)
+            self.assertEqual(len(fresh.get('progress')), 0)
+            self.assertNotIn('Added 8 puzzles', ' '.join(item.value for item in fresh.markdown))
+            fresh.session_state.analysis_status_job = ('another-user', 'active')
+            fresh.run()
+            self.assertEqual(len(fresh.get('progress')), 0)
 
     def test_saving_stays_below_100_percent(self):
         from visualization_all import progress_display

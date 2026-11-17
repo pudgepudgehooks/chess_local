@@ -50,7 +50,14 @@ def job_status(repository):
         logging.exception('Job status unavailable')
         st.error(tr('Analysis status is temporarily unavailable.'))
         return
-    for job in recent[:1]:
+    tracked = st.session_state.get('analysis_status_job')
+    selected = next((job for job in recent
+                     if tracked == (repository.owner, job.get('id'))), None)
+    if selected is None:
+        selected = next((job for job in recent if job['state'] in ('queued', 'running')), None)
+        if selected is not None:
+            st.session_state.analysis_status_job = (repository.owner, selected['id'])
+    for job in [selected] if selected is not None else []:
         st.caption(tr('{state} · {count} games analyzed', state=tr(job['state'].capitalize()), count=job['completed']))
         fraction, label = progress_display(job)
         st.progress(fraction, text=label)
@@ -114,7 +121,8 @@ def main(repository=None, playback_engine=None):
                         if repository:
                             texts = texts[-5:]
                     if repository:
-                        repository.submit(username, texts, depth, threshold)
+                        job_id = repository.submit(username, texts, depth, threshold)
+                        st.session_state.analysis_status_job = (repository.owner, job_id)
                     else:
                         games = [game for text in texts for game in read_games(text)]
                         found = []
