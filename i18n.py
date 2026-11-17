@@ -3,6 +3,14 @@ import re
 import streamlit as st
 
 ZH = {
+    'Lichess month': 'Lichess 月度棋谱', 'Your Lichess username': '你的 Lichess 用户名',
+    'Player username in PGN': 'PGN 棋谱中的用户名', 'Maximum games to import': '最多导入局数',
+    'Lichess imports completed standard games from the selected UTC month, newest first.': 'Lichess 按 UTC 月份导入已结束的标准对局，最新对局优先。',
+    'Choose a valid Lichess month (2013 or later) and 1–100 games.': '请选择有效的 Lichess 月份（2013 年起），并导入 1–100 局。',
+    'Lichess is rate limiting requests. Wait at least one minute before retrying.': 'Lichess 请求频率受限，请至少等待一分钟后再试。',
+    'Lichess username not found.': '未找到此 Lichess 用户名。',
+    'Lichess download exceeded 1 MB. Request fewer games.': 'Lichess 下载超过 1 MB，请减少导入局数。',
+    'Platform: {platform}': '平台：{platform}',
     'Chess Mistake Trainer': '国际象棋错题训练',
     'Chess Trainer · Private Beta': '国际象棋训练 · 内测版',
     'Generate puzzles': '生成练习题',

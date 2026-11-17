@@ -12,6 +12,8 @@ Deploy **beta_app.py**, not visualization_all.py or run_trainer.py. The local tr
 - Stockfish runs on the server with one thread and 32 MB hash. Each position search targets 0.15 seconds, depth at most 12. Jobs have a ten-minute analysis deadline; engine protocol operations have a ten-second timeout. This is a lightweight, approximate analysis suitable for a small beta; it is not equivalent to the unrestricted local depth-15 analysis.
 - Jobs are persisted before execution and survive page refreshes. A crashed job's 15-minute lease expires and it is retried on the next worker poll. Results commit atomically. Identical completed requests are reused per account.
 
+Both Chess.com and Lichess monthly imports are supported. Choose the source and use that platform's username. Lichess imports the five most recent completed standard games in the selected UTC month and does not need an API token. The same per-user quota and private storage apply to both platforms.
+
 ## 1. Create the database
 
 Use a managed PostgreSQL database with TLS. Keep its connection string private, and enable the provider's backups before inviting testers. Use a database role scoped to this app's database/schema; it needs permission to create the four `beta_*` tables at first startup. Never use the production database for tests. This repository does not create a hosting or database account for you.

@@ -4,7 +4,7 @@
 
 The online entry point is **beta_app.py**, with invite-only Google login, private PostgreSQL puzzle libraries, and bounded background Stockfish analysis. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for Community Cloud deployment and required database/login settings. The local trainer below remains available for offline personal use and is not the entry point to publish.
 
-Generate puzzles from your own moves in Chess.com archives or uploaded PGNs, then practice with saved review progress. Requires Python 3.10+ and a separately installed Stockfish executable.
+Generate puzzles from your own moves in Chess.com archives, Lichess history, or uploaded PGNs, then practice with saved review progress. Requires Python 3.10+ and a separately installed Stockfish executable.
 
 ## Start (PowerShell)
 
@@ -18,18 +18,21 @@ python -m streamlit run visualization_all.py
 
 If dependencies have already been installed locally in `.deps`, start directly with `python run_trainer.py`.
 
-You can also enter the engine path in the app. Enter your username as it appears in PGN player headers (case does not matter). Choose a Chess.com month or upload a PGN with one or several games. Only standard chess and your moves are analyzed. Repeat generation for more months; existing puzzles and progress are preserved.
+You can also enter the engine path in the app. Enter your username as it appears in PGN player headers (case does not matter). Choose a Chess.com or Lichess month, or upload a PGN with one or several games. Only standard chess and your moves are analyzed. Repeat generation for more months; existing puzzles and progress are preserved.
 
 ## Command line
 
 ```powershell
 python chess_analysis.py ursabearattack --year 2026 --month 6
 python chess_analysis.py ursabearattack --pgn games.pgn --depth 15 --threshold 150
+python chess_analysis.py YOUR_LICHESS_USERNAME --source lichess --year 2026 --month 10 --max-games 20
 ```
 
 Use `--engine 'C:\path\to\stockfish.exe'` instead of the environment variable if preferred. Threshold is in centipawns (100 = one pawn). Mate allowed and forced mate missed are tracked separately. Analysis ranks every legal first move to accept alternatives within 30 centipawns of the best move; this can be slow at depth 15. Mate alternatives must have the same mate score. Engine evaluations are depth-limited estimates. Not every evaluation drop will be a clean tactical puzzle.
 
 ## Review and storage
+
+For Lichess, choose **Lichess month**, enter your Lichess username and a year/month. Public, completed standard games are downloaded newest first using UTC month boundaries; no Lichess password or API token is needed. Local imports default to 20 games (maximum 100); the online beta imports at most five. Variant and ongoing games are excluded. If Lichess rate limits a request, wait at least a minute before retrying. Existing analysis, drag-and-drop, and review scheduling work with either platform. API reference: https://lichess.org/api#tag/Games/operation/apiGamesUser
 
 Use **Language / 语言** in the sidebar to switch between English and Simplified Chinese. The setting is kept during the session and in the page URL (`?lang=zh` or `?lang=en`). App labels, feedback, beta access messages, and draggable-board controls are translated; player names and SAN/UCI chess notation are preserved. Streamlit's built-in menus and file-picker chrome follow the framework/browser language.
 

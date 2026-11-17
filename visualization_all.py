@@ -8,7 +8,7 @@ import chess
 import chess.engine
 import chess.svg
 import streamlit as st
-from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, read_games
+from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn, read_games
 from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library
 from drag_board import drag_board, consume_move
 from i18n import tr, language, language_selector, error_text, job_message
@@ -45,17 +45,23 @@ def main(repository=None):
         st.stop()
     with st.sidebar:
         st.header(tr('Generate puzzles'))
-        username = st.text_input(tr('Your Chess.com username'), key='analysis_username')
+        source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'], format_func=partial(tr, _language=language()), key='analysis_source')
+        username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
+                                   'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username')
         executable = ''
         if repository is None:
             executable = st.text_input(tr('Stockfish executable path'), value=os.environ.get('STOCKFISH_PATH', ''), key='analysis_engine')
-        source = st.radio(tr('Game source'), ['Chess.com month', 'Upload PGN'], format_func=partial(tr, _language=language()), key='analysis_source')
         uploaded = None
         if source == 'Upload PGN':
             uploaded = st.file_uploader(tr('PGN file'), type=['pgn'], key='analysis_upload')
         else:
             year = st.number_input(tr('Year'), 1900, 2200, date.today().year, key='analysis_year')
             month = st.number_input(tr('Month'), 1, 12, date.today().month, key='analysis_month')
+        lichess_limit = 5
+        if source == 'Lichess month':
+            st.caption(tr('Lichess imports completed standard games from the selected UTC month, newest first.'))
+            if repository is None:
+                lichess_limit = st.number_input(tr('Maximum games to import'), 1, 100, 20, key='lichess_limit')
         depth = st.number_input(tr('Analysis depth'), 1, 12 if repository else 30, 10 if repository else 15, key='analysis_depth')
         threshold = st.number_input(tr('Minimum loss (centipawns)'), 50, 2000, 150, 50, key='analysis_threshold')
         st.caption(tr('100 centipawns = one pawn. Beta: up to five games per request, six requests per day.') if repository else tr('100 centipawns = one pawn. Analyzing all alternatives can take several minutes per game.'))
@@ -72,6 +78,8 @@ def main(repository=None):
                         if repository and len(raw) > 1024 * 1024:
                             raise ValueError('Beta uploads are limited to 1 MB.')
                         texts = [raw.decode('utf-8-sig')]
+                    elif source == 'Lichess month':
+                        texts = fetch_lichess_pgn(username, year, month, lichess_limit)
                     else:
                         texts = [g['pgn'] for g in fetch_chesscom_pgn(username, year, month)['games'] if g.get('rules', 'chess') == 'chess']
                         if repository:
@@ -115,6 +123,8 @@ def main(repository=None):
         st.warning(tr('Imported sample: player ownership and game source are unknown. Regenerate games for verified personal puzzles.'))
     else:
         st.caption(tr('{username} vs {opponent} · {date} · move {number}', username=puzzle['username'], opponent=puzzle['opponent'], date=puzzle['date'], number=puzzle['move_number']))
+        if puzzle.get('platform'):
+            st.caption(tr('Platform: {platform}', platform=puzzle['platform']))
     key = f"{repository.owner}-{puzzle['id']}" if repository else puzzle['id']
     st.caption(tr('Drag a piece to make your move. You can also click a piece and its destination.'))
     event = drag_board(board, key=f'board-{key}')

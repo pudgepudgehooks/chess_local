@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 import shutil
 import time
+import re
+from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 import chess
 import chess.engine
@@ -39,6 +42,45 @@ def read_games(text):
         if game.errors:
             raise ValueError(f'Invalid PGN: {game.errors[0]}')
         yield game
+
+
+def fetch_lichess_pgn(username, year, month, max_games=20):
+    """Fetch bounded, completed standard games in a UTC calendar month."""
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username.strip()):
+        raise ValueError('Enter a valid player username (letters, numbers, underscores or hyphens).')
+    if not 2013 <= year <= 2200 or not 1 <= month <= 12 or not 1 <= max_games <= 100:
+        raise ValueError('Choose a valid Lichess month (2013 or later) and 1–100 games.')
+    start = datetime(year, month, 1, tzinfo=timezone.utc)
+    end = datetime(year + (month == 12), 1 if month == 12 else month + 1, 1, tzinfo=timezone.utc)
+    params = {
+        'since': max(1356998400070, int(start.timestamp() * 1000)),
+        'until': int(end.timestamp() * 1000) - 1, 'max': max_games,
+        'perfType': 'ultraBullet,bullet,blitz,rapid,classical,correspondence',
+        'moves': 'true', 'tags': 'true', 'clocks': 'false', 'evals': 'false',
+        'ongoing': 'false', 'finished': 'true', 'sort': 'dateDesc',
+    }
+    with requests.get(f'https://lichess.org/api/games/user/{username.strip()}', params=params,
+                      headers={'Accept': 'application/x-chess-pgn', 'User-Agent': 'ChessMistakeTrainer/1.0'},
+                      timeout=(10, 30), stream=True) as response:
+        if response.status_code == 429:
+            raise ValueError('Lichess is rate limiting requests. Wait at least one minute before retrying.')
+        if response.status_code == 404:
+            raise ValueError('Lichess username not found.')
+        response.raise_for_status()
+        chunks, size = [], 0
+        for chunk in response.iter_content(chunk_size=16384):
+            size += len(chunk)
+            if size > 1024 * 1024:
+                raise ValueError('Lichess download exceeded 1 MB. Request fewer games.')
+            chunks.append(chunk)
+    games = []
+    for game in read_games(b''.join(chunks).decode('utf-8-sig')):
+        board = game.board()
+        if type(board) is chess.Board and not board.chess960 and game.headers.get('Result') != '*':
+            games.append(game.accept(chess.pgn.StringExporter(headers=True, variations=False, comments=False)))
+        if len(games) >= max_games:
+            break
+    return games
 
 
 def mistake_kind(before, after, threshold):
@@ -116,6 +158,8 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
                 'after': score_data(after), 'color': 'white' if color else 'black',
                 'opponent': game.headers.get('Black' if color else 'White', '?'),
                 'date': game.headers.get('Date', '?'), 'game_url': source,
+                'platform': 'Lichess' if urlparse(source).hostname == 'lichess.org' else
+                            'Chess.com' if (urlparse(source).hostname or '').endswith('.chess.com') or urlparse(source).hostname == 'chess.com' else 'PGN',
                 'move_number': board.fullmove_number, 'depth': depth})
         board.push(move)
     return puzzles
@@ -128,6 +172,8 @@ def main():
     parser.add_argument('--pgn', type=Path)
     parser.add_argument('--year', type=int)
     parser.add_argument('--month', type=int)
+    parser.add_argument('--source', choices=['chesscom', 'lichess'], default='chesscom')
+    parser.add_argument('--max-games', type=int, default=20, help='Lichess import limit, 1–100')
     parser.add_argument('--engine')
     parser.add_argument('--depth', type=int, default=15)
     parser.add_argument('--threshold', type=int, default=150)
@@ -137,8 +183,11 @@ def main():
     if args.pgn:
         texts = [args.pgn.read_text(encoding='utf-8-sig')]
     elif args.year and args.month:
-        texts = [g['pgn'] for g in fetch_chesscom_pgn(args.username, args.year, args.month)['games']
-                 if g.get('rules', 'chess') == 'chess']
+        if args.source == 'lichess':
+            texts = fetch_lichess_pgn(args.username, args.year, args.month, args.max_games)
+        else:
+            texts = [g['pgn'] for g in fetch_chesscom_pgn(args.username, args.year, args.month)['games']
+                     if g.get('rules', 'chess') == 'chess']
     else:
         parser.error('Provide --pgn or both --year and --month.')
     library = load_library()
