@@ -10,7 +10,7 @@ import chess.engine
 import chess.svg
 import streamlit as st
 from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn, read_games, count_player_moves
-from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library, puzzle_month
+from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library, puzzle_month, meets_review_loss
 from drag_board import drag_board, consume_move, playback_frames
 from i18n import tr, language, language_selector, error_text, job_message
 
@@ -163,14 +163,19 @@ def main(repository=None, playback_engine=None):
     month = st.selectbox(tr('Saved game month'), month_options,
                          format_func=partial(tr, _language=language()), key='review_month')
     st.caption(tr('Filter by the month the game was played. Your saved puzzles and progress are kept.'))
-    filter_key = (due_only, player, month)
+    review_loss = st.number_input(tr('Minimum review loss (centipawns)'), min_value=0, value=0,
+                                  step=50, key='review_loss',
+                                  help=tr('0 shows all saved puzzles, including mate-related mistakes without a numeric loss. Higher values show only puzzles with a recorded loss at or above this value.'))
+    st.caption(tr('This filters saved puzzles without deleting them or changing analysis settings.'))
+    filter_key = (due_only, player, month, review_loss)
     if st.session_state.get('review_filter') != filter_key:
         st.session_state.review_filter = filter_key
         st.session_state.pop('active_id', None)
         st.session_state.pop('review_cycle', None)
         st.session_state.pop('board_feedback', None)
     available = {p['id']: p for p in owned
-                 if month == 'All months' or puzzle_month(p) == month}
+                 if (month == 'All months' or puzzle_month(p) == month)
+                 and meets_review_loss(p, review_loss)}
     cycle = st.session_state.get('review_cycle')
     if cycle is None:
         cycle = {'ids': [pid for pid, p in available.items() if not due_only or is_due(p)],
@@ -178,7 +183,10 @@ def main(repository=None, playback_engine=None):
         st.session_state.review_cycle = cycle
     puzzles = [available[pid] for pid in cycle['ids'] if pid in available]
     if not puzzles:
-        st.info(tr('No puzzles are due. Generate puzzles or turn off the due-only filter.'))
+        if owned and not available:
+            st.info(tr('No saved puzzles match these filters. Lower the minimum review loss or choose another month or player.'))
+        else:
+            st.info(tr('No puzzles are due. Generate puzzles or turn off the due-only filter.'))
         # An initially empty library may receive new puzzles on a later rerun.
         st.session_state.pop('review_cycle', None)
         return

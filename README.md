@@ -48,6 +48,8 @@ Each review cycle visits the selected puzzles once. After the last puzzle, choos
 
 Use **Saved game month** to review one month, such as `2026-08`, or choose **All months**. Months come from the saved game's date, not the date you generated the puzzles. Undated samples and PGNs with an unknown month appear under **Unknown date**. Changing the month starts a new cycle limited to that month; shuffled restarts stay within it. Switching months keeps all saved puzzles and review history. Turn off the due-only filter to revisit a month's puzzles before their next scheduled review.
 
+Use **Minimum review loss (centipawns)** to filter the saved library independently of the analysis threshold. Set it to `300` to practice only recorded losses of at least 300 centipawns; smaller mistakes stay saved and reappear if you lower the filter. The month, owner, and due-only filters still apply, and shuffled restarts use only the matching round. The default `0` shows all saved losses, including mate-related or old puzzles without a numeric loss. Positive thresholds exclude those puzzles because they have no centipawn value. Changing the review threshold starts a fresh cycle without changing review history or analysis settings.
+
 Old visualization entry points launch the same draggable trainer. The trainer does not need the optional API.
 
 ## Optional API

@@ -18,6 +18,14 @@ def puzzle_month(puzzle):
     return f'{match[1]}-{match[3]}'
 
 
+def meets_review_loss(puzzle, minimum):
+    """A positive review threshold requires a recorded numeric centipawn loss."""
+    if minimum == 0:
+        return True
+    loss = puzzle.get('loss')
+    return isinstance(loss, (int, float)) and not isinstance(loss, bool) and loss >= minimum
+
+
 def load_library(path=LIBRARY_PATH):
     path = Path(path)
     if path.exists():

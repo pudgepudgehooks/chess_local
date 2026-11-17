@@ -3,6 +3,10 @@ import re
 import streamlit as st
 
 ZH = {
+    'Minimum review loss (centipawns)': '复习最低失分（厘兵）',
+    '0 shows all saved puzzles, including mate-related mistakes without a numeric loss. Higher values show only puzzles with a recorded loss at or above this value.': '设为 0 显示所有已保存的题目，包括没有数值失分的将杀相关错题。大于 0 时，只显示已记录失分且达到该数值的题目。',
+    'This filters saved puzzles without deleting them or changing analysis settings.': '此项仅筛选已保存的题目，不会删除题目或更改分析设置。',
+    'No saved puzzles match these filters. Lower the minimum review loss or choose another month or player.': '没有符合筛选条件的已保存题目。请降低复习最低失分，或选择其他月份或用户名。',
     'Saved game month': '已保存棋谱的月份',
     'All months': '所有月份',
     'Unknown date': '日期未知',
