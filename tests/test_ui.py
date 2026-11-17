@@ -67,4 +67,63 @@ class TrainerUITests(unittest.TestCase):
             app.run()
             app.button(key='next_puzzle').click().run()
             self.assertFalse(app.exception)
-            self.assertTrue(any('No puzzles are due' in info.value for info in app.info))
+            self.assertTrue(any('Cycle complete!' in item.value for item in app.success))
+            self.assertTrue(app.button(key='rest_cycle'))
+            self.assertTrue(app.button(key='restart_cycle'))
+
+    def test_cycle_rest_restart_shuffles_and_keeps_reviews(self):
+        from copy import deepcopy
+        from puzzle_store import record_review
+        library = load_library()
+        library['puzzles'] = library['puzzles'][:3]
+        for puzzle in library['puzzles']:
+            puzzle.pop('review', None)
+        with patch('puzzle_store.load_library', return_value=library), \
+             patch('puzzle_store.save_library') as save, \
+             patch('drag_board.drag_board', return_value=None) as component:
+            app = self.app().run(timeout=30)
+            original_order = list(app.session_state['review_cycle']['ids'])
+            original_token = app.session_state['review_cycle']['token']
+            for puzzle in library['puzzles']:
+                record_review(puzzle, True)
+            saved_reviews = deepcopy([p['review'] for p in library['puzzles']])
+            for _ in original_order:
+                app.button(key='next_puzzle').click().run()
+            self.assertFalse(app.exception)
+            self.assertTrue(any('Cycle complete!' in item.value for item in app.success))
+            self.assertFalse(any(b.key == 'next_puzzle' for b in app.button))
+            app.button(key='rest_cycle').click().run()
+            self.assertEqual(app.session_state['review_cycle']['state'], 'rest')
+            self.assertTrue(any('Enjoy your break' in item.value for item in app.info))
+            app.run()
+            self.assertEqual(app.session_state['review_cycle']['state'], 'rest')
+            with patch('random.shuffle', side_effect=lambda ids: ids.reverse()) as shuffle:
+                app.button(key='restart_cycle').click().run()
+                shuffle.assert_called_once()
+            cycle = app.session_state['review_cycle']
+            self.assertEqual(cycle['ids'], original_order[::-1])
+            self.assertNotEqual(cycle['token'], original_token)
+            self.assertEqual(app.session_state['active_id'], cycle['ids'][0])
+            self.assertIsNone(component.call_args.kwargs['response'])
+            self.assertEqual([p['review'] for p in library['puzzles']], saved_reviews)
+            save.assert_not_called()
+            app.selectbox(key='ui_language').set_value('zh').run()
+            self.assertEqual(app.session_state['review_cycle']['ids'], cycle['ids'])
+            for _ in original_order:
+                app.button(key='next_puzzle').click().run()
+            self.assertEqual(app.session_state['review_cycle']['state'], 'complete')
+            self.assertEqual(app.button(key='rest_cycle').label, '休息一下')
+
+    def test_single_puzzle_cycle_can_restart_without_stale_board(self):
+        library = load_library()
+        library['puzzles'] = library['puzzles'][:1]
+        library['puzzles'][0].pop('review', None)
+        with patch('puzzle_store.load_library', return_value=library), \
+             patch('drag_board.drag_board', return_value=None) as component:
+            app = self.app().run(timeout=30)
+            first_key = component.call_args.kwargs['key']
+            app.button(key='next_puzzle').click().run()
+            app.button(key='restart_cycle').click().run()
+            self.assertFalse(app.exception)
+            self.assertNotEqual(component.call_args.kwargs['key'], first_key)
+            self.assertIsNone(component.call_args.kwargs['response'])

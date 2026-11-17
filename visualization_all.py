@@ -3,6 +3,8 @@ from datetime import date
 from functools import partial
 import os
 import logging
+import random
+import uuid
 import chess
 import chess.engine
 import chess.svg
@@ -53,7 +55,10 @@ def job_status(repository):
         fraction, label = progress_display(job)
         st.progress(fraction, text=label)
         st.write(job_message(job['message']))
-    if st.button(tr('Refresh puzzle library'), key='refresh_library'):
+    if st.button(tr('Update puzzle library'), key='refresh_library'):
+        st.session_state.pop('review_cycle', None)
+        st.session_state.pop('active_id', None)
+        st.session_state.pop('board_feedback', None)
         st.rerun()
 
 def main(repository=None, playback_engine=None):
@@ -128,6 +133,8 @@ def main(repository=None, playback_engine=None):
                         progress.progress(0.99, text=tr('Saving puzzles…'))
                         added = merge_puzzles(library, found)
                         save_library(library)
+                        st.session_state.pop('review_cycle', None)
+                        st.session_state.pop('board_feedback', None)
                         progress.progress(1.0, text=tr('Analysis complete · 100%'))
                 st.success(tr('Analysis queued (or already analyzed). You can leave and return later.') if repository else tr('Analyzed {games} games. Added {added} puzzles.', games=len(games), added=added))
             except Exception as exc:
@@ -142,12 +149,41 @@ def main(repository=None, playback_engine=None):
     if st.session_state.get('review_filter') != filter_key:
         st.session_state.review_filter = filter_key
         st.session_state.pop('active_id', None)
-    active_id = st.session_state.get('active_id')
-    puzzles = [p for p in library['puzzles'] if (not due_only or is_due(p) or p['id'] == active_id) and (player == 'All players' or p.get('username') == player)]
+        st.session_state.pop('review_cycle', None)
+        st.session_state.pop('board_feedback', None)
+    available = {p['id']: p for p in library['puzzles']
+                 if player == 'All players' or p.get('username') == player}
+    cycle = st.session_state.get('review_cycle')
+    if cycle is None:
+        cycle = {'ids': [pid for pid, p in available.items() if not due_only or is_due(p)],
+                 'index': 0, 'state': 'active', 'token': uuid.uuid4().hex}
+        st.session_state.review_cycle = cycle
+    puzzles = [available[pid] for pid in cycle['ids'] if pid in available]
     if not puzzles:
         st.info(tr('No puzzles are due. Generate puzzles or turn off the due-only filter.'))
+        # An initially empty library may receive new puzzles on a later rerun.
+        st.session_state.pop('review_cycle', None)
         return
-    index = next((i for i, p in enumerate(puzzles) if p['id'] == active_id), 0)
+    if cycle['state'] in ('complete', 'rest'):
+        st.session_state.active_id = None
+        st.success(tr('Cycle complete! Take a rest or practice your mistakes again.'))
+        if cycle['state'] == 'rest':
+            st.info(tr('Enjoy your break. Your progress is saved. Start over whenever you are ready.'))
+        elif st.button(tr('Take a rest'), key='rest_cycle'):
+            cycle['state'] = 'rest'
+            st.rerun()
+        if st.button(tr('Start over with shuffled puzzles'), key='restart_cycle'):
+            previous_order = [p['id'] for p in puzzles]
+            order = previous_order.copy()
+            random.shuffle(order)
+            if len(order) > 1 and order == previous_order:
+                order = order[1:] + order[:1]
+            st.session_state.review_cycle = {'ids': order, 'index': 0, 'state': 'active',
+                                             'token': uuid.uuid4().hex}
+            st.session_state.pop('board_feedback', None)
+            st.rerun()
+        return
+    index = min(cycle['index'], len(puzzles) - 1)
     puzzle = puzzles[index]
     st.session_state.active_id = puzzle['id']
     board = chess.Board(puzzle['fen'])
@@ -162,7 +198,7 @@ def main(repository=None, playback_engine=None):
     st.caption(tr('Drag a piece to make your move. You can also click a piece and its destination.'))
     previous = st.session_state.get('board_feedback', {})
     response = previous.get('response') if previous.get('key') == key else None
-    event = drag_board(board, key=f'board-{key}', response=response)
+    event = drag_board(board, key=f"board-{key}-{cycle['token']}", response=response)
     seen = st.session_state.setdefault('board_events', [])
     new_event = (isinstance(event, dict) and event.get('fen') == board.fen()
                  and isinstance(event.get('event_id'), str) and bool(event['event_id'])
@@ -234,9 +270,10 @@ def main(repository=None, playback_engine=None):
     review = puzzle.get('review', {})
     st.caption(tr('Saved attempts: {attempts} · Correct: {correct}', attempts=review.get('attempts', 0), correct=review.get('correct', 0)))
     if st.button(tr('Next puzzle'), key='next_puzzle'):
-        ordered = puzzles[index + 1:] + puzzles[:index + 1]
-        next_puzzle = next((p for p in ordered if not due_only or is_due(p)), None)
-        st.session_state.active_id = next_puzzle['id'] if next_puzzle else None
+        cycle['index'] = index + 1
+        if cycle['index'] >= len(puzzles):
+            cycle['state'] = 'complete'
+        st.session_state.pop('board_feedback', None)
         st.rerun()
 if __name__ == '__main__':
     main()
