@@ -132,6 +132,12 @@ window.addEventListener('message', e => {
   const contextChanged=!session || session.originalFen!==incoming.fen;
   if (contextChanged) { clearTimeout(timer); session=new BoardSession(incoming.fen); }
   args=incoming;
+  for (const [name, variable] of Object.entries({
+    'square light':'--board-light', 'square dark':'--board-dark', 'margin':'--board-border',
+    'square light lastmove':'--board-light-last', 'square dark lastmove':'--board-dark-last',
+  })) {
+    if (args.colors?.[name]) document.documentElement.style.setProperty(variable, args.colors[name]);
+  }
   document.documentElement.lang=args.language==='zh' ? 'zh-CN' : 'en';
   board.setAttribute('aria-label',t('Chess puzzle board'));
   promotion.querySelector('strong').textContent=t('Promote to:');

@@ -8,6 +8,7 @@ import streamlit as st
 
 from i18n import tr
 from puzzle_store import is_due
+from board_theme import BOARD_COLORS
 
 PAGE_SIZE = 12
 
@@ -37,7 +38,7 @@ def show_library(puzzles):
                 valid = True
                 try:
                     board = chess.Board(puzzle['fen'])
-                    st.image(chess.svg.board(board, orientation=board.turn, size=240),
+                    st.image(chess.svg.board(board, orientation=board.turn, size=240, colors=BOARD_COLORS),
                              width='stretch')
                     st.caption(tr('{side} to move', side=tr('White' if board.turn else 'Black')))
                 except (ValueError, KeyError):
