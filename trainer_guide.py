@@ -4,6 +4,10 @@ from i18n import tr
 
 
 SECTIONS = [
+    ('Browse your mistake library', [
+        'Open Mistake library to browse small boards showing each puzzle before your answer. Cards show the game date, opponent, loss, attempts, and review status. Use Library page to browse more results; the player, month, review loss, and due-only filters above apply to both tabs.',
+        'Click Review this puzzle to open that position in Practice with a fresh board. The selected puzzle starts a new cycle, followed by the other matching puzzles. Browsing previews does not count as an attempt or change saved progress. Turn off due-only to choose puzzles scheduled for later.',
+    ]),
     ('Generate puzzles from your games', [
         'In the sidebar, choose Chess.com month, Lichess month, or Upload PGN. Enter the chess username whose moves you want analyzed, then select a year and month or upload a PGN file. The engine looks for mistakes made by that player.',
         'Minimum loss (centipawns) controls which evaluation drops are saved during analysis. 100 centipawns equals one pawn; 150 means 1.5 pawns and 300 means 3 pawns. Mate-related mistakes are tracked separately. Analysis depth controls how deeply the engine searches; higher settings take longer.',

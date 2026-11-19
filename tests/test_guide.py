@@ -16,14 +16,14 @@ class GuideUITests(unittest.TestCase):
              patch('drag_board.drag_board', return_value=None):
             app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')).run(timeout=30)
             self.assertFalse(app.exception)
-            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['Practice', 'How it works'])
+            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['Practice', 'Mistake library', 'How it works'])
             app.number_input(key='review_loss').set_value(300).run()
             app.button(key='next_puzzle').click().run()
             active = app.session_state['active_id']
             token = app.session_state['review_cycle']['token']
             app.selectbox(key='ui_language').set_value('zh').run()
             self.assertFalse(app.exception)
-            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['练习', '使用说明'])
+            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['练习', '错题库', '使用说明'])
             self.assertEqual(app.session_state['active_id'], active)
             self.assertEqual(app.session_state['review_cycle']['token'], token)
             self.assertEqual(app.number_input(key='review_loss').value, 300)

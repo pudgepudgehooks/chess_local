@@ -1,0 +1,85 @@
+from copy import deepcopy
+from pathlib import Path
+import unittest
+from unittest.mock import patch
+
+import chess
+
+from puzzle_store import record_review
+
+
+def fixture_library(count=18):
+    return {'version': 1, 'puzzles': [
+        dict(id=f'p{i}', fen=chess.STARTING_FEN, username='alice' if i != 17 else 'bob',
+             opponent=f'Opponent {i}', date='2026.08.01' if i < 16 else '2026.09.01',
+             loss=150 if i % 2 else 300, legacy=True, played='h2h3',
+             best_move='e2e4', accepted_moves=['e2e4'], solution=['e2e4', 'e7e5'])
+        for i in range(count)]}
+
+
+class LibraryUITests(unittest.TestCase):
+    def app(self):
+        from streamlit.testing.v1 import AppTest
+        return AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py'))
+
+    def open_ids(self, app):
+        return [b.key for b in app.button if b.key and b.key.startswith('open-puzzle-')]
+
+    def test_browse_pages_select_and_reopen_solved_puzzle_without_extra_attempts(self):
+        library = fixture_library()
+        record_review(library['puzzles'][1], True)
+        before = deepcopy(library)
+        with patch('puzzle_store.load_library', return_value=library), \
+             patch('puzzle_store.save_library') as save, \
+             patch('drag_board.drag_board', return_value=None) as board:
+            app = self.app().run(timeout=30)
+            self.assertFalse(app.exception)
+            self.assertNotIn('open-puzzle-p1', self.open_ids(app), 'due-only hides scheduled puzzles')
+            app.checkbox(key='due_only').uncheck().run()
+            self.assertEqual(len(self.open_ids(app)), 12)
+            app.number_input(key='library_page').set_value(2).run()
+            self.assertEqual(self.open_ids(app), [f'open-puzzle-p{i}' for i in range(12, 18)])
+            self.assertEqual(library, before, 'browsing cannot alter review history')
+            save.assert_not_called()
+            app.button(key='open-puzzle-p15').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['main_tab'], 'Practice')
+            self.assertEqual(app.session_state['active_id'], 'p15')
+            self.assertEqual(app.session_state['review_cycle']['ids'][0], 'p15')
+            self.assertEqual(len(set(app.session_state['review_cycle']['ids'])), 18)
+            key = board.call_args.kwargs['key']
+            board.return_value = dict(fen=chess.STARTING_FEN, uci='e2e4', event_id='solve-library-p15')
+            app.run()
+            self.assertEqual(save.call_count, 1)
+            self.assertEqual(library['puzzles'][15]['review']['attempts'], 1)
+            app.button(key='open-puzzle-p15').click().run()
+            self.assertIsNone(board.call_args.kwargs['response'])
+            self.assertNotEqual(board.call_args.kwargs['key'], key)
+            self.assertEqual(library['puzzles'][15]['review']['attempts'], 1)
+            self.assertEqual(save.call_count, 1)
+
+    def test_filters_reset_pagination_and_language_keeps_library_tab(self):
+        library = fixture_library()
+        with patch('puzzle_store.load_library', return_value=library), \
+             patch('puzzle_store.save_library') as save, \
+             patch('drag_board.drag_board', return_value=None):
+            app = self.app().run(timeout=30)
+            app.number_input(key='library_page').set_value(2).run()
+            app.selectbox(key='puzzle_player').set_value('alice').run()
+            app.selectbox(key='review_month').set_value('2026-08').run()
+            app.number_input(key='review_loss').set_value(300).run()
+            self.assertEqual(app.number_input(key='library_page').value, 1)
+            self.assertEqual(self.open_ids(app), [f'open-puzzle-p{i}' for i in range(0, 16, 2)])
+            app.session_state.main_tab_name = 'Mistake library'
+            app.run()
+            app.selectbox(key='ui_language').set_value('zh').run()
+            self.assertEqual(app.session_state['main_tab'], '错题库')
+            self.assertEqual(app.button(key='open-puzzle-p4').label, '练习此题')
+            app.button(key='open-puzzle-p4').click().run()
+            self.assertEqual(app.session_state['main_tab'], '练习')
+            self.assertEqual(app.session_state['active_id'], 'p4')
+            self.assertTrue(set(app.session_state['review_cycle']['ids']) <= {f'p{i}' for i in range(0, 16, 2)})
+            app.number_input(key='review_loss').set_value(1000).run()
+            self.assertFalse(self.open_ids(app))
+            self.assertFalse(app.exception)
+            save.assert_not_called()

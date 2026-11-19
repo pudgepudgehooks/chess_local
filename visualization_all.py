@@ -14,6 +14,7 @@ from puzzle_store import is_due, load_library, merge_puzzles, record_review, sav
 from drag_board import drag_board, consume_move, playback_frames
 from i18n import tr, language, language_selector, error_text, job_message
 from trainer_guide import show_guide
+from mistake_library import show_library
 
 def evaluation(value):
     if not value:
@@ -69,19 +70,31 @@ def job_status(repository):
         st.session_state.pop('board_feedback', None)
         st.rerun()
 
+TAB_NAMES = ['Practice', 'Mistake library', 'How it works']
+
+
+def remember_main_tab():
+    st.session_state.main_tab_name = next(
+        (name for name in TAB_NAMES if tr(name) == st.session_state.main_tab), 'Practice')
+
+
 def main(repository=None, playback_engine=None):
     if repository is None:
         st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
         language_selector()
     st.title(tr('Chess Mistake Trainer'))
-    review_tab, guide_tab = st.tabs([tr('Practice'), tr('How it works')])
+    filters = st.container()
+    name = st.session_state.pop('next_main_tab', st.session_state.get('main_tab_name', 'Practice'))
+    st.session_state.main_tab_name = name
+    st.session_state.main_tab = tr(name)
+    review_tab, library_tab, guide_tab = st.tabs(
+        [tr(name) for name in TAB_NAMES], key='main_tab', on_change=remember_main_tab)
     with guide_tab:
         show_guide(online=repository is not None)
-    with review_tab:
-        trainer(repository, playback_engine)
+    trainer(repository, playback_engine, filters, review_tab, library_tab)
 
 
-def trainer(repository=None, playback_engine=None):
+def trainer(repository, playback_engine, filters, review_tab, library_tab):
     try:
         library = repository.load() if repository else load_library()
     except Exception as exc:
@@ -159,6 +172,25 @@ def trainer(repository=None, playback_engine=None):
                 st.error(error_text(exc) if isinstance(exc, ValueError) else tr('Generation failed. Please try again later.') if repository else tr('Generation failed: {error}', error=error_text(exc)))
         if repository:
             job_status(repository)
+    with filters:
+        owned, available, due_only = review_filters(library)
+    with library_tab:
+        candidates = [p for p in available.values() if not due_only or is_due(p)]
+        selected = show_library(candidates)
+        if selected is not None:
+            ids = [p['id'] for p in candidates]
+            index = ids.index(selected)
+            st.session_state.review_cycle = {'ids': ids[index:] + ids[:index], 'index': 0,
+                                             'state': 'active', 'token': uuid.uuid4().hex}
+            st.session_state.active_id = selected
+            st.session_state.pop('board_feedback', None)
+            st.session_state.next_main_tab = 'Practice'
+            st.rerun()
+    with review_tab:
+        practice_puzzles(library, repository, playback_engine, owned, available, due_only)
+
+
+def review_filters(library):
     due_only = st.checkbox(tr('Only show puzzles due for review'), value=True, key='due_only')
     names = sorted({p['username'] for p in library['puzzles'] if p.get('username')})
     player = st.selectbox(tr('Puzzle owner'), ['All players'] + names, format_func=lambda value, all_label=tr('All players'): all_label if value == 'All players' else value, key='puzzle_player')
@@ -183,9 +215,14 @@ def trainer(repository=None, playback_engine=None):
         st.session_state.pop('active_id', None)
         st.session_state.pop('review_cycle', None)
         st.session_state.pop('board_feedback', None)
+        st.session_state.pop('library_page', None)
     available = {p['id']: p for p in owned
                  if (month == 'All months' or puzzle_month(p) == month)
                  and meets_review_loss(p, review_loss)}
+    return owned, available, due_only
+
+
+def practice_puzzles(library, repository, playback_engine, owned, available, due_only):
     cycle = st.session_state.get('review_cycle')
     if cycle is None:
         cycle = {'ids': [pid for pid, p in available.items() if not due_only or is_due(p)],
