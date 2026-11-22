@@ -65,6 +65,8 @@ def drag_board(board, key, response=None):
             'Correct! Use Forward and Back to review the continuation.', 'Click Next Puzzle to proceed.',
             'Back', 'Forward', 'Starting position.', 'Step {step}/{total}: {move}',
             'Correct! No continuation is available for this position.',
+            "Good move! This is an acceptable alternative. The engine's top choice is {move}. Use Forward and Back to review the continuation.",
+            "Good move! This is an acceptable alternative. The engine's top choice is {move}. No continuation is available for this position.",
             'Could not save your review. Please try again.',
         ]},
         pieces={chess.square_name(s): {

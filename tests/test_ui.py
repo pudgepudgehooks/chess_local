@@ -12,6 +12,46 @@ class TrainerUITests(unittest.TestCase):
         from streamlit.testing.v1 import AppTest
         return seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library)
 
+    def test_alternative_feedback_and_own_continuation_in_both_languages(self):
+        import chess
+        for continuation in (True, False):
+            with self.subTest(continuation=continuation):
+                puzzle = dict(id='alternative', fen=chess.STARTING_FEN, best_move='d2d4', played='f2f3',
+                    accepted_moves=['d2d4', 'g1f3'], accepted_lines={'g1f3': ['g1f3', 'd7d5']},
+                    solution=['d2d4', 'd7d5'], username='Player', opponent='Other', date='2026.11.01',
+                    move_number=1, loss=200)
+                library = {'puzzles': [puzzle]}
+                board = chess.Board()
+                frames = []
+                for uci in (['g1f3', 'd7d5'] if continuation else ['g1f3']):
+                    move = chess.Move.from_uci(uci)
+                    san = board.san(move)
+                    board.push(move)
+                    frames.append(dict(fen=board.fen(), uci=uci, san=san))
+                event = dict(fen=puzzle['fen'], uci='g1f3', event_id='alternative-answer')
+                with patch('puzzle_store.load_library', return_value=library), \
+                     patch('puzzle_store.save_library') as save, \
+                     patch('drag_board.drag_board', return_value=event) as component, \
+                     patch('drag_board.playback_frames', return_value=frames) as playback:
+                    app = self.app(library).run(timeout=30)
+                    self.assertFalse(app.exception)
+                    response = component.call_args.kwargs['response']
+                    self.assertEqual(response['status'], 'correct')
+                    self.assertEqual(response['message_values'], {'move': 'd4'})
+                    self.assertEqual(response['frames'][0]['uci'], 'g1f3')
+                    self.assertEqual(playback.call_args.args[1].uci(), 'g1f3')
+                    self.assertIn('acceptable alternative', app.success[0].value)
+                    self.assertIn('d4', app.success[0].value)
+                    self.assertNotIn('{move}', app.success[0].value)
+                    if not continuation:
+                        self.assertIn('No continuation', app.success[0].value)
+                    self.assertEqual(puzzle['review']['correct'], 1)
+                    app.selectbox(key='ui_language').set_value('zh').run()
+                    self.assertFalse(app.exception)
+                    self.assertIn('另一种着法', app.success[0].value)
+                    self.assertIn('d4', app.success[0].value)
+                    self.assertEqual(save.call_count, 1)
+
     def test_dragged_answer_saved_once_across_reruns(self):
         library = load_library()
         puzzle = library['puzzles'][0]
@@ -23,6 +63,7 @@ class TrainerUITests(unittest.TestCase):
             app = self.app(library).run(timeout=30)
             self.assertFalse(app.exception)
             self.assertTrue(app.success)
+            self.assertNotIn('acceptable alternative', app.success[0].value)
             self.assertEqual(save.call_count, 1)
             response = component.call_args.kwargs['response']
             self.assertEqual(response['status'], 'correct')

@@ -29,6 +29,7 @@ class GuideUITests(unittest.TestCase):
             self.assertEqual(app.session_state['review_cycle']['token'], token)
             self.assertEqual(app.number_input(key='analysis_threshold').value, 300)
             self.assertTrue(any('10 分钟' in item.value for item in app.markdown))
+            self.assertTrue(any('30 厘兵' in item.value for item in app.markdown))
             save.assert_not_called()
 
     def test_online_guide_explains_beta_instead_of_local_setup(self):
@@ -38,4 +39,6 @@ class GuideUITests(unittest.TestCase):
         text = '\n'.join(item.value for item in app.markdown)
         self.assertIn('review opens automatically', text)
         self.assertIn('five uncovered games per start', text)
+        self.assertIn('30 centipawns (0.3 pawns)', text)
+        self.assertIn('same review schedule', text)
         self.assertNotIn('Stockfish executable path', text)

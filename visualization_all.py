@@ -250,6 +250,13 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
                     message = 'Correct! Use Forward and Back to review the continuation.'
                     if len(result['frames']) == 1 and not chess.Board(result['frames'][0]['fen']).is_game_over():
                         message = 'Correct! No continuation is available for this position.'
+                    if move.uci() != puzzle['best_move']:
+                        result['message_values'] = {'move': board.san(chess.Move.from_uci(puzzle['best_move']))}
+                        message = ('Good move! This is an acceptable alternative. The engine\'s top choice is {move}. '
+                                   'Use Forward and Back to review the continuation.')
+                        if len(result['frames']) == 1 and not chess.Board(result['frames'][0]['fen']).is_game_over():
+                            message = ('Good move! This is an acceptable alternative. The engine\'s top choice is {move}. '
+                                       'No continuation is available for this position.')
             except Exception as exc:
                 logging.exception('Review save failed')
                 result['status'] = 'error'
@@ -259,7 +266,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         st.rerun()
     if response:
         if response['status'] == 'correct':
-            st.success(tr(response['message']))
+            st.success(tr(response['message'], **response.get('message_values', {})))
         # Incorrect-answer feedback lives on the board so it can clear instantly
         # when the user picks up a piece for their next attempt.
     if st.button(tr('Hint'), key=f'hint-{key}'):

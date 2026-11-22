@@ -21,6 +21,9 @@ SECTIONS = [
     ]),
     ('Answer a puzzle on the board', [
         'Drag a piece to its destination. For promotion, choose the new piece. Your piece stays on its destination while the answer is checked. The app accepts the saved best move and accepted alternatives.',
+        'You do not have to find the engine\'s single top choice. During analysis, moves evaluated within 30 centipawns (0.3 pawns) of the best move are saved as acceptable alternatives. This tolerance is set by the app, with no extra setting to choose. It is separate from Minimum loss, which decides which game mistakes become puzzles.',
+        'An accepted alternative counts as correct and receives the same review schedule as the best move. Feedback identifies it as a good alternative and shows the engine\'s top choice. The continuation follows your move. This is based on engine evaluation, not a judgment of how easy a move is for a human to play.',
+        'Mate positions use a separate rule: an alternative must have the same engine mate score as the best move. Older puzzles may only have the best move saved; missing alternatives require a fresh analysis and are not added just by reviewing the puzzle.',
         'An incorrect answer resets the board so you can try again. The error clears when you begin another attempt. After a correct answer, the piece stays where you moved it. Click Forward or Back to move through the continuation one step at a time. Back can return to the original position. Nothing plays automatically, and navigating the line does not record more attempts.',
         'Hint points to the piece to move. Reveal solution and original mistake shows your original move, the engine line, and the evaluation change. Open original game is available when a game link was saved. Click Next puzzle when ready to continue.',
     ]),

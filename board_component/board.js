@@ -32,7 +32,7 @@ function render() {
     board.append(button);
   }
   highlights();
-  status.textContent = t(session.status);
+  status.textContent = t(session.status, args.response?.message_values || {});
   if (session.solved && session.index >= 0 && session.index < session.frames.length - 1) {
     status.textContent += ' '+t('Step {step}/{total}: {move}', {step:session.index+1, total:session.frames.length, move:session.frames[session.index].san});
   }

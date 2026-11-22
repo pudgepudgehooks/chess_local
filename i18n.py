@@ -3,6 +3,11 @@ import re
 import streamlit as st
 
 ZH = {
+    "Good move! This is an acceptable alternative. The engine's top choice is {move}. Use Forward and Back to review the continuation.": '好棋！这是可以接受的另一种着法。引擎的首选是 {move}。请点击“向前”和“向后”查看后续着法。',
+    "Good move! This is an acceptable alternative. The engine's top choice is {move}. No continuation is available for this position.": '好棋！这是可以接受的另一种着法。引擎的首选是 {move}。此局面暂无可用的后续着法。',
+    "You do not have to find the engine's single top choice. During analysis, moves evaluated within 30 centipawns (0.3 pawns) of the best move are saved as acceptable alternatives. This tolerance is set by the app, with no extra setting to choose. It is separate from Minimum loss, which decides which game mistakes become puzzles.": '不必只找到引擎的唯一首选。分析时，评估比最佳着法低不超过 30 厘兵（0.3 个兵）的着法也会保存为可接受的答案。这个容差由应用设定，无需额外选择。它与“最低失分”不同，后者决定对局中的哪些失误会生成题目。',
+    "An accepted alternative counts as correct and receives the same review schedule as the best move. Feedback identifies it as a good alternative and shows the engine's top choice. The continuation follows your move. This is based on engine evaluation, not a judgment of how easy a move is for a human to play.": '可接受的其他着法也算回答正确，复习安排与最佳着法相同。反馈会说明这是可接受的另一种着法，并显示引擎的首选。后续演示会从你所走的着法继续。这依据引擎评估，并非判断着法对人类来说是否容易。',
+    'Mate positions use a separate rule: an alternative must have the same engine mate score as the best move. Older puzzles may only have the best move saved; missing alternatives require a fresh analysis and are not added just by reviewing the puzzle.': '将杀局面使用单独规则：其他着法的引擎将杀评分必须与最佳着法相同。旧题目可能只保存了最佳着法；缺失的其他答案需要重新分析才能补充，仅复习题目不会自动添加。',
     'Engine did not return a usable analysis for this position.': '引擎未能为此局面返回可用的分析。',
     'Upload the PGN to find new mistakes. Without a file, only matching saved puzzles can be reviewed.': '上传 PGN 才能查找新的失误。没有文件时，只能复习符合条件的已保存题目。',
     'Start a review': '开始一轮复习',
