@@ -1,4 +1,6 @@
 from copy import deepcopy
+from datetime import date
+from ui_helpers import seed_review, choose_review
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -27,32 +29,30 @@ class ReviewLossTests(unittest.TestCase):
         with patch('puzzle_store.load_library', return_value=library), \
              patch('puzzle_store.save_library') as save, \
              patch('drag_board.drag_board', return_value=None) as board:
-            app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')).run(timeout=30)
-            app.checkbox(key='due_only').uncheck().run()
-            app.selectbox(key='puzzle_player').set_value('alice').run()
-            app.selectbox(key='review_month').set_value('2026-08').run()
+            app = seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')),
+                              library, username='alice', start=date(2026, 8, 1), end=date(2026, 8, 31), due_only=False).run(timeout=30)
             token = app.session_state['review_cycle']['token']
-            app.number_input(key='review_loss').set_value(300).run()
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=300)
             self.assertEqual(app.session_state['review_cycle']['ids'], ['boundary', 'large'])
             self.assertNotEqual(app.session_state['review_cycle']['token'], token)
             self.assertIsNone(board.call_args.kwargs['response'])
-            self.assertEqual(app.number_input(key='analysis_threshold').value, 150)
-            app.checkbox(key='due_only').check().run()
+            self.assertEqual(app.number_input(key='analysis_threshold').value, 300)
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=300, due_only=True)
             self.assertEqual(app.session_state['review_cycle']['ids'], ['large'])
-            app.checkbox(key='due_only').uncheck().run()
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=300)
             for _ in range(2):
                 app.button(key='next_puzzle').click().run()
             with patch('random.shuffle', side_effect=lambda ids: ids.reverse()):
                 app.button(key='restart_cycle').click().run()
             self.assertEqual(app.session_state['review_cycle']['ids'], ['large', 'boundary'])
             app.selectbox(key='ui_language').set_value('zh').run()
-            self.assertEqual(app.number_input(key='review_loss').value, 300)
-            self.assertEqual(app.number_input(key='review_loss').label, '复习最低失分（厘兵）')
+            self.assertEqual(app.number_input(key='analysis_threshold').value, 300)
+            self.assertEqual(app.session_state['review_setup']['threshold'], 300)
             app.selectbox(key='ui_language').set_value('en').run()
-            app.number_input(key='review_loss').set_value(1000).run()
-            self.assertTrue(any('No saved puzzles match' in item.value for item in app.info))
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=1000)
+            self.assertTrue(any('No puzzles match' in item.value for item in app.info))
             self.assertFalse(any(b.key == 'next_puzzle' for b in app.button))
-            app.number_input(key='review_loss').set_value(0).run()
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=0)
             self.assertEqual(app.session_state['review_cycle']['ids'], ['small', 'below', 'boundary', 'large', 'mate'])
             self.assertFalse(app.exception)
             self.assertEqual(library, original)

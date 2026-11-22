@@ -46,7 +46,7 @@ class BetaGateUITests(unittest.TestCase):
                     app.text_input(key='account_password').set_value('assigned password here')
                     next(b for b in app.button if b.label == 'Sign in').click().run()
                     self.assertFalse(app.exception)
-                    self.assertTrue(any('No puzzles are due' in item.value for item in app.info))
+                    self.assertTrue(any('click Start reviewing' in item.value for item in app.info))
                     self.assertFalse(any(t.label == 'Stockfish executable path' for t in app.text_input))
                     token = app.session_state['account_token']
                     app.button(key='beta_logout').click().run()

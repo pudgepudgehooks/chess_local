@@ -70,6 +70,7 @@ class DateRangeTests(unittest.TestCase):
 class DateRangeUITests(unittest.TestCase):
     def test_review_range_filters_both_views_and_shuffled_restart_without_deleting(self):
         from streamlit.testing.v1 import AppTest
+        from ui_helpers import choose_review
         dates = ['2026.08.29', '2026.08.30', '2026.09.01', '2026.09.02', '?']
         library = {'version': 1, 'puzzles': [dict(
             id=f'd{i}', username='Me', date=day, legacy=True, fen=chess.STARTING_FEN,
@@ -77,12 +78,10 @@ class DateRangeUITests(unittest.TestCase):
             solution=['e2e4', 'e7e5'], loss=300) for i, day in enumerate(dates)]}
         original = deepcopy(library)
         with patch('visualization_all.load_library', return_value=library), \
-             patch('visualization_all.save_library') as save, \
+             patch('puzzle_store.save_library') as save, \
              patch('visualization_all.drag_board', return_value=None):
-            app = AppTest.from_string('from visualization_all import main\nmain()').run(timeout=30)
-            app.selectbox(key='review_period').set_value('Date range').run()
-            app.date_input(key='review_start_date').set_value(date(2026, 8, 30)).run()
-            app.date_input(key='review_end_date').set_value(date(2026, 9, 1)).run()
+            app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run(timeout=30)
+            choose_review(app, 'Me', date(2026, 8, 30), date(2026, 9, 1))
             self.assertEqual(app.session_state['review_cycle']['ids'], ['d1', 'd2'])
             self.assertEqual([b.key for b in app.button if b.key and b.key.startswith('open-puzzle-')], ['open-puzzle-d1', 'open-puzzle-d2'])
             for _ in range(2):
@@ -90,32 +89,34 @@ class DateRangeUITests(unittest.TestCase):
             app.button(key='restart_cycle').click().run()
             self.assertEqual(set(app.session_state['review_cycle']['ids']), {'d1', 'd2'})
             app.selectbox(key='ui_language').set_value('zh').run()
-            self.assertEqual(app.date_input(key='review_start_date').value, date(2026, 8, 30))
-            self.assertEqual(app.date_input(key='review_end_date').label, '复习结束日期')
+            self.assertEqual(app.date_input(key='analysis_start_date').value, date(2026, 8, 30))
             app.selectbox(key='ui_language').set_value('en').run()
-            app.date_input(key='review_start_date').set_value(date(2026, 9, 3)).run()
+            app.date_input(key='analysis_start_date').set_value(date(2026, 9, 3)).run()
             self.assertTrue(any('Start date must be' in item.value for item in app.error))
+            self.assertEqual(app.session_state['review_setup']['start'], date(2026, 8, 30))
+            self.assertTrue(app.button(key='start_review').disabled)
             self.assertFalse(app.exception)
             self.assertEqual(library, original)
             save.assert_not_called()
 
     def test_generate_passes_selected_range_and_disables_invalid_dates(self):
         from streamlit.testing.v1 import AppTest
-        with patch('visualization_all.load_library', return_value={'version': 1, 'puzzles': []}), \
-             patch('visualization_all.save_library'), \
-             patch('visualization_all.fetch_chesscom_range', return_value=[pgn('2026.08.01')]) as fetch, \
-             patch('visualization_all.fetch_chesscom_pgn') as monthly, \
-             patch('visualization_all.engine_path', return_value='test'), \
-             patch('visualization_all.analyze_game', return_value=[]), \
+        library = {'version': 1, 'puzzles': []}
+        with patch('visualization_all.load_library', return_value=library), \
+             patch('puzzle_store.save_library'), \
+             patch('chess_analysis.fetch_chesscom_range', return_value=[pgn('2026.08.01')]) as fetch, \
+             patch('chess_analysis.fetch_chesscom_pgn') as monthly, \
+             patch('chess_analysis.engine_path', return_value='test'), \
+             patch('chess_analysis.analyze_game', return_value=[]), \
              patch('chess.engine.SimpleEngine.popen_uci'):
-            app = AppTest.from_string('from visualization_all import main\nmain()').run(timeout=30)
-            app.selectbox(key='analysis_period').set_value('Date range').run()
-            app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1)).run()
-            app.date_input(key='analysis_end_date').set_value(date(2026, 8, 31)).run()
+            app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run(timeout=30)
+            app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1))
+            app.date_input(key='analysis_end_date').set_value(date(2026, 8, 31))
             app.text_input(key='analysis_username').set_value('Me')
-            app.button(key='generate_puzzles').click().run()
-            fetch.assert_called_once_with('Me', date(2026, 8, 1), date(2026, 8, 31), max_games=None)
+            app.run()
+            app.button(key='start_review').click().run()
+            fetch.assert_called_once_with('Me', date(2026, 8, 1), date(2026, 8, 31), max_games=100)
             monthly.assert_not_called()
             app.date_input(key='analysis_start_date').set_value(date(2026, 9, 1)).run()
-            self.assertTrue(app.button(key='generate_puzzles').disabled)
+            self.assertTrue(app.button(key='start_review').disabled)
             self.assertFalse(app.exception)

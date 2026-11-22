@@ -1,5 +1,5 @@
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import json
 from pathlib import Path
 import tempfile
@@ -94,11 +94,14 @@ class GenerationTests(unittest.TestCase):
             code = "from beta_store import BetaStore, UserLibrary\nfrom visualization_all import main\nmain(UserLibrary(BetaStore('test'), 'alice'))"
             try:
                 with patch('beta_store.BetaStore', return_value=store), \
-                     patch('visualization_all.fetch_chesscom_pgn', return_value={'games': [{'pgn': pgn}]}), \
+                     patch('chess_analysis.fetch_chesscom_range', return_value=['[Date \"2026.08.01\"]\n' + pgn]), \
                      patch('drag_board.drag_board', return_value=None):
-                    app = AppTest.from_string(code).run(timeout=30)
+                    app = AppTest.from_string(code, default_timeout=30).run(timeout=30)
                     app.text_input(key='analysis_username').set_value('Me')
-                    app.button(key='generate_puzzles').click().run()
+                    app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1))
+                    app.date_input(key='analysis_end_date').set_value(date(2026, 8, 31))
+                    app.run()
+                    app.button(key='start_review').click().run()
                     self.assertFalse(app.exception)
                     job = store.claim()
                     self.assertIsNotNone(job)

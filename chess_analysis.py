@@ -191,11 +191,7 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
         lines = engine.analyse(board, chess.engine.Limit(depth=depth, time=position_time), multipv=board.legal_moves.count())
         lines = [line for line in lines if line.get('pv')]
         if not lines:
-            board.push(move)
-            completed += 1
-            if on_progress:
-                on_progress(completed, total)
-            continue
+            raise ValueError('Engine did not return a usable analysis for this position.')
         best = lines[0]
         before = best['score'].pov(color)
         actual = next((line for line in lines if line['pv'][0] == move), None)

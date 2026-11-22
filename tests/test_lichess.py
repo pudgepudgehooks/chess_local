@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import importlib.util
 from pathlib import Path
 import unittest
@@ -87,7 +87,7 @@ class LichessUITests(unittest.TestCase):
         from test_trainer import FakeEngine
         library = load_library()
         with patch('puzzle_store.load_library', return_value=library), patch('puzzle_store.save_library') as save, \
-             patch('chess_analysis.fetch_lichess_pgn', return_value=[PGN]) as fetch, \
+             patch('chess_analysis.fetch_lichess_range', return_value=['[Date \"2026.08.01\"]\n' + PGN]) as fetch, \
              patch('chess_analysis.engine_path', return_value='test-engine'), \
              patch('chess.engine.SimpleEngine.popen_uci') as engine:
             engine.return_value.__enter__.return_value = FakeEngine()
@@ -95,15 +95,17 @@ class LichessUITests(unittest.TestCase):
             app.radio(key='analysis_source').set_value('Lichess month').run()
             self.assertFalse(app.exception)
             self.assertEqual(app.text_input(key='analysis_username').label, 'Your Lichess username')
-            self.assertEqual(app.number_input(key='lichess_limit').value, 20)
+            self.assertEqual(app.number_input(key='analysis_import_limit').value, 100)
             app.text_input(key='analysis_username').set_value('Me')
+            app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1))
+            app.date_input(key='analysis_end_date').set_value(date(2026, 8, 31))
             app.selectbox(key='ui_language').set_value('zh').run()
             self.assertFalse(app.exception)
             self.assertEqual(app.text_input(key='analysis_username').label, '你的 Lichess 用户名')
             self.assertEqual(app.radio(key='analysis_source').value, 'Lichess month')
-            app.button(key='generate_puzzles').click().run()
+            app.button(key='start_review').click().run()
             self.assertFalse(app.exception)
-            self.assertTrue(app.success)
+            self.assertIn('review_setup', app.session_state)
             self.assertEqual(fetch.call_args.args[0], 'Me')
-            self.assertEqual(fetch.call_args.args[3], 20)
+            self.assertEqual(fetch.call_args.args[3], 100)
             save.assert_called_once()

@@ -16,9 +16,9 @@ PAGE_SIZE = 12
 def show_library(puzzles):
     """Return the selected puzzle ID; browsing never records a review."""
     st.header(tr('Mistake library'))
-    st.caption(tr('Browse starting positions and choose a puzzle to practice. The filters above apply here too; turn off due-only to see puzzles scheduled for later.'))
+    st.caption(tr('Browse starting positions from your last Start reviewing selection. Change settings in the sidebar and click Start reviewing to apply them.'))
     if not puzzles:
-        st.info(tr('No saved puzzles match the current filters. Try another month, lower the review loss, or turn off due-only.'))
+        st.info(tr('No puzzles match your applied settings. Adjust the sidebar and click Start reviewing again.'))
         return None
     counts = st.columns(3)
     counts[0].metric(tr('Matching puzzles'), len(puzzles))

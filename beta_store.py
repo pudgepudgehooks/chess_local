@@ -8,6 +8,7 @@ from sqlalchemy import (Column, Float, Integer, MetaData, String, Table, Text,
                         create_engine, select, update, delete, func)
 from sqlalchemy.exc import IntegrityError
 from puzzle_store import record_review, deduplicate_puzzles, merge_puzzles
+from analysis_cache import BETA_POLICY, plan_analysis, coverage_records
 
 meta = MetaData()
 puzzles = Table('beta_puzzles', meta,
@@ -27,6 +28,11 @@ job_progress = Table('beta_job_progress', meta,
     Column('job_id', String(64), primary_key=True),
     Column('games_total', Integer, nullable=False), Column('game_index', Integer, nullable=False),
     Column('positions_done', Integer, nullable=False), Column('positions_total', Integer, nullable=False))
+analyses = Table('beta_game_analyses', meta,
+    Column('owner', String(64), primary_key=True), Column('game_key', String(64), primary_key=True),
+    Column('policy', String(40), primary_key=True), Column('depth', Integer, primary_key=True),
+    Column('threshold', Integer, primary_key=True), Column('player', String(50), nullable=False),
+    Column('completed_at', String(64), nullable=False))
 
 
 class BetaStore:
@@ -79,13 +85,26 @@ class BetaStore:
             db.execute(update(puzzles).where(puzzles.c.owner == owner, puzzles.c.id == puzzle_id).values(data=json.dumps(puzzle)))
             return puzzle
 
-    def submit(self, owner, payload):
+    def coverage(self, owner):
+        with self.engine.connect() as db:
+            return [dict(row) for row in db.execute(select(analyses).where(analyses.c.owner == owner)).mappings()]
+
+    def prepare_analysis(self, owner, username, texts, depth, threshold):
+        from beta_worker import validate_payload
+        payload = validate_payload(username, texts, depth, threshold, max_games=100)
+        plan = plan_analysis(username, texts, self.coverage(owner), depth, threshold, BETA_POLICY, limit=5)
+        selected = [item['text'] for item in plan.pop('items')]
+        plan['job_id'] = self.submit(owner, dict(payload, texts=selected), allow_completed=False) if selected else None
+        return plan
+
+    def submit(self, owner, payload, allow_completed=True):
         fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
         now = time.time()
         with self.engine.begin() as db:
             db.execute(select(guard).where(guard.c.id == 1).with_for_update()).first()
+            reusable = jobs.c.state != 'failed' if allow_completed else jobs.c.state.in_(['queued', 'running'])
             previous = db.execute(select(jobs).where(jobs.c.owner == owner,
-                jobs.c.fingerprint == fingerprint, jobs.c.state != 'failed').order_by(jobs.c.created.desc())).mappings().first()
+                jobs.c.fingerprint == fingerprint, reusable).order_by(jobs.c.created.desc())).mappings().first()
             if previous:
                 return previous['id']
             active = db.scalar(select(func.count()).select_from(jobs).where(
@@ -161,6 +180,14 @@ class BetaStore:
                             db.execute(update(puzzles).where(puzzles.c.owner == job['owner'], puzzles.c.id == puzzle['id']).values(data=data))
                     else:
                         db.execute(puzzles.insert().values(owner=job['owner'], id=puzzle['id'], data=data))
+                payload = json.loads(row._mapping['payload'])
+                if all(key in payload for key in ('username', 'texts', 'depth', 'threshold')):
+                    for record in coverage_records(**payload, policy=BETA_POLICY):
+                        identity = [analyses.c.owner == job['owner'], analyses.c.game_key == record['game_key'],
+                                    analyses.c.policy == record['policy'], analyses.c.depth == record['depth'],
+                                    analyses.c.threshold == record['threshold']]
+                        if not db.execute(select(analyses.c.game_key).where(*identity)).first():
+                            db.execute(analyses.insert().values(owner=job['owner'], **record))
             db.execute(update(jobs).where(jobs.c.id == job['id']).values(state='failed' if error else 'done',
                 message=error or f'Added {added} puzzles. Your library is up to date.', payload='{}'))
 
@@ -187,6 +214,10 @@ class UserLibrary:
         from beta_worker import validate_payload
         payload = validate_payload(username, texts, depth, threshold)
         return self.store.submit(self.owner, payload)
+
+    def prepare_analysis(self, username, texts, depth, threshold):
+        self._check_access()
+        return self.store.prepare_analysis(self.owner, username, texts, depth, threshold)
 
     def recent_jobs(self):
         self._check_access()

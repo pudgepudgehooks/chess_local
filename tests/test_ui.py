@@ -3,13 +3,14 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 from puzzle_store import load_library
+from ui_helpers import seed_review
 
 
 @unittest.skipUnless(importlib.util.find_spec('streamlit'), 'Streamlit is not installed')
 class TrainerUITests(unittest.TestCase):
-    def app(self):
+    def app(self, library):
         from streamlit.testing.v1 import AppTest
-        return AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py'))
+        return seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library)
 
     def test_dragged_answer_saved_once_across_reruns(self):
         library = load_library()
@@ -19,7 +20,7 @@ class TrainerUITests(unittest.TestCase):
         with patch('puzzle_store.load_library', return_value=library), \
              patch('puzzle_store.save_library') as save, \
              patch('drag_board.drag_board', return_value=event) as component:
-            app = self.app().run(timeout=30)
+            app = self.app(library).run(timeout=30)
             self.assertFalse(app.exception)
             self.assertTrue(app.success)
             self.assertEqual(save.call_count, 1)
@@ -38,7 +39,7 @@ class TrainerUITests(unittest.TestCase):
             puzzle.pop('review', None)
         with patch('puzzle_store.load_library', return_value=library), patch('puzzle_store.save_library') as save, \
              patch('drag_board.drag_board', return_value=None) as component:
-            app = self.app().run(timeout=30)
+            app = self.app(library).run(timeout=30)
             self.assertFalse(app.exception)
             self.assertFalse(any(t.label.startswith('Your move') for t in app.text_input))
             self.assertFalse(any(b.label == 'Check move' for b in app.button))
@@ -81,7 +82,7 @@ class TrainerUITests(unittest.TestCase):
         with patch('puzzle_store.load_library', return_value=library), \
              patch('puzzle_store.save_library') as save, \
              patch('drag_board.drag_board', return_value=None) as component:
-            app = self.app().run(timeout=30)
+            app = self.app(library).run(timeout=30)
             original_order = list(app.session_state['review_cycle']['ids'])
             original_token = app.session_state['review_cycle']['token']
             for puzzle in library['puzzles']:
@@ -120,7 +121,7 @@ class TrainerUITests(unittest.TestCase):
         library['puzzles'][0].pop('review', None)
         with patch('puzzle_store.load_library', return_value=library), \
              patch('drag_board.drag_board', return_value=None) as component:
-            app = self.app().run(timeout=30)
+            app = self.app(library).run(timeout=30)
             first_key = component.call_args.kwargs['key']
             app.button(key='next_puzzle').click().run()
             app.button(key='restart_cycle').click().run()

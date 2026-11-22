@@ -1,23 +1,16 @@
 """Run with: python -m streamlit run visualization_all.py"""
-from datetime import date
-from functools import partial
-import os
 import logging
 import random
 import uuid
 import chess
-import chess.engine
-import chess.svg
 import streamlit as st
-from chess_analysis import (analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn,
-                            fetch_chesscom_range, fetch_lichess_range, filter_games_by_date,
-                            read_games, count_player_moves)
-from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library, puzzle_month, meets_review_loss
+from chess_analysis import engine_path
+from puzzle_store import is_due, load_library, record_review, save_library
 from drag_board import drag_board, consume_move, playback_frames
 from i18n import tr, language, language_selector, error_text, job_message
 from trainer_guide import show_guide
 from mistake_library import show_library
-from game_dates import game_date, validate_date_range, within_dates
+from review_setup import setup_sidebar, filter_library, reset_round
 
 def evaluation(value):
     if not value:
@@ -68,9 +61,18 @@ def job_status(repository):
             # The worker commits puzzles before marking the job done. Refresh the
             # whole app once so its library, filters, and preview grid reload too.
             st.session_state.analysis_library_loaded_job = completed
-            for key in ['review_cycle', 'active_id', 'board_feedback', 'library_page']:
-                st.session_state.pop(key, None)
+            pending = st.session_state.pop('pending_review_setup', None)
+            if pending and pending['owner'] == repository.owner:
+                st.session_state.review_setup = pending
+                st.session_state.review_plan = st.session_state.pop('pending_review_plan', {})
+                st.session_state.next_main_tab = 'Practice'
+            reset_round()
             st.rerun()
+    if selected is not None and selected['state'] == 'failed' and st.session_state.get('pending_review_setup'):
+        st.session_state.pop('pending_review_setup', None)
+        st.session_state.pop('pending_review_plan', None)
+        st.session_state.review_start_error = selected['message']
+        st.rerun()
     for job in [selected] if selected is not None else []:
         st.caption(tr('{state} · {count} games analyzed', state=tr(job['state'].capitalize()), count=job['completed']))
         fraction, label = progress_display(job)
@@ -78,24 +80,6 @@ def job_status(repository):
         st.write(job_message(job['message']))
 
 TAB_NAMES = ['Practice', 'Mistake library', 'How it works']
-
-
-def date_range_picker(prefix, start_default, end_default, max_days=None):
-    containers = st.columns(2) if prefix == 'review' else [st.container(), st.container()]
-    with containers[0]:
-        start = st.date_input(tr('Review start date' if prefix == 'review' else 'Start date'),
-                              value=start_default, min_value=date(1900, 1, 1),
-                              max_value=date(2200, 12, 31), format='YYYY-MM-DD', key=f'{prefix}_start_date')
-    with containers[1]:
-        end = st.date_input(tr('Review end date' if prefix == 'review' else 'End date'),
-                            value=end_default, min_value=date(1900, 1, 1),
-                            max_value=date(2200, 12, 31), format='YYYY-MM-DD', key=f'{prefix}_end_date')
-    try:
-        validate_date_range(start, end, max_days=max_days)
-    except ValueError as exc:
-        st.error(error_text(exc))
-        return (start, end), False
-    return (start, end), True
 
 
 def remember_main_tab():
@@ -108,7 +92,6 @@ def main(repository=None, playback_engine=None):
         st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
         language_selector()
     st.title(tr('Chess Mistake Trainer'))
-    filters = st.container()
     name = st.session_state.pop('next_main_tab', st.session_state.get('main_tab_name', 'Practice'))
     st.session_state.main_tab_name = name
     st.session_state.main_tab = tr(name)
@@ -116,107 +99,56 @@ def main(repository=None, playback_engine=None):
         [tr(name) for name in TAB_NAMES], key='main_tab', on_change=remember_main_tab)
     with guide_tab:
         show_guide(online=repository is not None)
-    trainer(repository, playback_engine, filters, review_tab, library_tab)
+    trainer(repository, playback_engine, review_tab, library_tab)
 
 
-def trainer(repository, playback_engine, filters, review_tab, library_tab):
+def trainer(repository, playback_engine, review_tab, library_tab):
     try:
         library = repository.load() if repository else load_library()
     except Exception as exc:
         logging.exception('Puzzle library load failed')
         st.error(tr('Your puzzle library is temporarily unavailable.') if repository else tr('Cannot load puzzle library: {error}', error=error_text(exc)))
         st.stop()
-    with st.sidebar:
-        st.header(tr('Generate puzzles'))
-        source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'],
-                          format_func=lambda value, lang=language(): tr({'Chess.com month': 'Chess.com', 'Lichess month': 'Lichess'}.get(value, value), _language=lang), key='analysis_source')
-        username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
-                                   'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username')
-        executable = ''
-        if repository is None:
-            executable = st.text_input(tr('Stockfish executable path'), value=os.environ.get('STOCKFISH_PATH', ''), key='analysis_engine')
-        uploaded = None
-        periods = ['All uploaded games', 'Date range'] if source == 'Upload PGN' else ['Month', 'Date range']
-        if st.session_state.get('analysis_period', periods[0]) not in periods:
-            st.session_state.analysis_period = periods[0]
-        period = st.selectbox(tr('Games to analyze'), periods,
-                              format_func=partial(tr, _language=language()), key='analysis_period')
-        analysis_dates, dates_valid = None, True
-        if source == 'Upload PGN':
-            uploaded = st.file_uploader(tr('PGN file'), type=['pgn'], key='analysis_upload')
-        if period == 'Date range':
-            analysis_dates, dates_valid = date_range_picker('analysis', date.today().replace(day=1), date.today(), max_days=366)
-            st.caption(tr('Both dates are included. Games with unknown dates are excluded. Analysis ranges can cover up to 366 days.'))
-        elif source != 'Upload PGN':
-            year = st.number_input(tr('Year'), 1900, 2200, date.today().year, key='analysis_year')
-            month = st.number_input(tr('Month'), 1, 12, date.today().month, key='analysis_month')
-        lichess_limit = 5
-        if source == 'Lichess month':
-            st.caption(tr('Lichess imports completed standard games from the selected UTC date range, newest first.') if analysis_dates else tr('Lichess imports completed standard games from the selected UTC month, newest first.'))
-            if repository is None:
-                lichess_limit = st.number_input(tr('Maximum games to import'), 1, 100, 20, key='lichess_limit')
-        depth = st.number_input(tr('Analysis depth'), 1, 12 if repository else 30, 10 if repository else 15, key='analysis_depth')
-        threshold = st.number_input(tr('Minimum loss (centipawns)'), 50, 2000, 150, 50, key='analysis_threshold')
-        st.caption(tr('100 centipawns = one pawn. Beta: up to five games per request, six requests per day.') if repository else tr('100 centipawns = one pawn. Analyzing all alternatives can take several minutes per game.'))
-        if st.button(tr('Generate puzzles'), key='generate_puzzles', disabled=not dates_valid):
-            try:
-                if not username.strip():
-                    raise ValueError('Enter your username to select your moves.')
-                path = None if repository else engine_path(executable.strip() or None)
-                with st.spinner(tr('Analyzing games…')):
-                    if source == 'Upload PGN':
-                        if uploaded is None:
-                            raise ValueError('Choose a PGN file first.')
-                        raw = uploaded.getvalue()
-                        if repository and len(raw) > 1024 * 1024:
-                            raise ValueError('Beta uploads are limited to 1 MB.')
-                        texts = [raw.decode('utf-8-sig')]
-                        if analysis_dates:
-                            texts = filter_games_by_date(texts, *analysis_dates)
-                    elif analysis_dates:
-                        texts = (fetch_lichess_range(username, *analysis_dates, lichess_limit)
-                                 if source == 'Lichess month' else
-                                 fetch_chesscom_range(username, *analysis_dates, max_games=5 if repository else None))
-                    elif source == 'Lichess month':
-                        texts = fetch_lichess_pgn(username, year, month, lichess_limit)
-                    else:
-                        texts = [g['pgn'] for g in fetch_chesscom_pgn(username, year, month)['games'] if g.get('rules', 'chess') == 'chess']
-                        if repository:
-                            texts = texts[-5:]
-                    if repository:
-                        job_id = repository.submit(username, texts, depth, threshold)
-                        st.session_state.analysis_status_job = (repository.owner, job_id)
-                        st.session_state.pop('analysis_library_loaded_job', None)
-                    else:
-                        games = [game for text in texts for game in read_games(text)]
-                        found = []
-                        total_positions = sum(count_player_moves(game, username) for game in games)
-                        completed_positions = 0
-                        progress = st.progress(0, text=tr('Preparing analysis…'))
-                        with chess.engine.SimpleEngine.popen_uci(path) as engine:
-                            for i, game in enumerate(games):
-                                def report(done, total):
-                                    completed = completed_positions + done
-                                    fraction = min(0.99, completed / total_positions) if total_positions else 0.0
-                                    label = analysis_progress_text(i + 1, len(games), completed, total_positions, fraction)
-                                    progress.progress(fraction, text=label)
-                                found.extend(analyze_game(game, username, engine, depth, threshold, on_progress=report))
-                                completed_positions += count_player_moves(game, username)
-                        progress.progress(0.99, text=tr('Saving puzzles…'))
-                        added = merge_puzzles(library, found)
-                        save_library(library)
-                        st.session_state.pop('review_cycle', None)
-                        st.session_state.pop('board_feedback', None)
-                        progress.progress(1.0, text=tr('Analysis complete · 100%'))
-                st.success(tr('Analysis queued (or already analyzed). You can leave and return later.') if repository else tr('Analyzed {games} games. Added {added} puzzles.', games=len(games), added=added))
-            except Exception as exc:
-                logging.exception('Puzzle generation request failed')
-                st.error(error_text(exc) if isinstance(exc, ValueError) else tr('Generation failed. Please try again later.') if repository else tr('Generation failed: {error}', error=error_text(exc)))
-        if repository:
+    owner = repository.owner if repository else 'local'
+    for key in ('review_setup', 'pending_review_setup'):
+        if st.session_state.get(key, {}).get('owner', owner) != owner:
+            st.session_state.pop(key, None)
+            reset_round()
+    setup = setup_sidebar(library, repository, analysis_progress_text)
+    if repository:
+        with st.sidebar:
             job_status(repository)
-    with filters:
-        owned, available, due_only = review_filters(library)
+    if st.session_state.get('review_start_error'):
+        st.error(job_message(st.session_state.review_start_error))
+    if st.session_state.get('pending_review_setup'):
+        with review_tab:
+            st.info(tr('Analyzing your selected games. Your review will open automatically when ready.'))
+        with library_tab:
+            st.info(tr('Preparing your selected library. Please wait for analysis to finish.'))
+        return
+    if setup is None:
+        with review_tab:
+            st.info(tr('Choose your chess username, dates, and minimum loss in the left sidebar, then click Start reviewing.'))
+        with library_tab:
+            st.info(tr('Click Start reviewing in the sidebar to choose which saved puzzles to browse.'))
+        return
+    summary = tr('Reviewing {username} · {start} to {end} · Minimum loss: {loss} centipawns',
+                 username=setup['username'], start=setup['start'].isoformat(), end=setup['end'].isoformat(), loss=setup['threshold'])
+    plan = st.session_state.get('review_plan', {})
+    with review_tab:
+        st.caption(summary)
+        if plan.get('reused'):
+            st.caption(tr('Reused saved analysis for {count} games. No repeat analysis was needed for those games.', count=plan['reused']))
+        if plan.get('selected'):
+            st.caption(tr('Analyzed {count} games for this review.', count=plan['selected']))
+        if plan.get('remaining'):
+            st.info(tr('{count} more fetched games still need analysis. Click Start reviewing again to process the next batch.', count=plan['remaining']))
+        if plan and not plan.get('fetched'):
+            st.info(tr('No games were returned for analysis. Showing any matching saved puzzles.'))
+    available = filter_library(library, setup)
+    due_only = setup['due_only']
     with library_tab:
+        st.caption(summary)
         candidates = [p for p in available.values() if not due_only or is_due(p)]
         selected = show_library(candidates)
         if selected is not None:
@@ -229,51 +161,7 @@ def trainer(repository, playback_engine, filters, review_tab, library_tab):
             st.session_state.next_main_tab = 'Practice'
             st.rerun()
     with review_tab:
-        practice_puzzles(library, repository, playback_engine, owned, available, due_only)
-
-
-def review_filters(library):
-    due_only = st.checkbox(tr('Only show puzzles due for review'), value=True, key='due_only')
-    names = sorted({p['username'] for p in library['puzzles'] if p.get('username')})
-    player = st.selectbox(tr('Puzzle owner'), ['All players'] + names, format_func=lambda value, all_label=tr('All players'): all_label if value == 'All players' else value, key='puzzle_player')
-    st.caption(tr('Puzzle owner is the Chess.com or Lichess username whose mistakes generated these puzzles, rather than your app login. Select All players to review every chess username in your saved library.'))
-    owned = [p for p in library['puzzles'] if player == 'All players' or p.get('username') == player]
-    months = {puzzle_month(p) for p in owned}
-    month_options = ['All months'] + sorted(months - {'Unknown date'}, reverse=True)
-    if 'Unknown date' in months:
-        month_options.append('Unknown date')
-    if st.session_state.get('review_month', 'All months') not in month_options:
-        st.session_state.review_month = 'All months'
-    period = st.selectbox(tr('Review dates'), ['Saved month', 'Date range'],
-                          format_func=partial(tr, _language=language()), key='review_period')
-    review_dates, dates_valid = None, True
-    if period == 'Saved month':
-        month = st.selectbox(tr('Saved game month'), month_options,
-                             format_func=partial(tr, _language=language()), key='review_month')
-        st.caption(tr('Filter by the month the game was played. Your saved puzzles and progress are kept.'))
-    else:
-        month = 'All months'
-        known_dates = [played for p in owned if (played := game_date(p.get('date'))) is not None
-                       and date(1900, 1, 1) <= played <= date(2200, 12, 31)]
-        review_dates, dates_valid = date_range_picker('review', min(known_dates, default=date.today().replace(day=1)),
-                                                       max(known_dates, default=date.today()))
-        st.caption(tr('Both dates are included. Undated puzzles are hidden in date-range mode. Your saved puzzles and progress are kept.'))
-    review_loss = st.number_input(tr('Minimum review loss (centipawns)'), min_value=0, value=0,
-                                  step=50, key='review_loss',
-                                  help=tr('0 shows all saved puzzles, including mate-related mistakes without a numeric loss. Higher values show only puzzles with a recorded loss at or above this value.'))
-    st.caption(tr('This filters saved puzzles without deleting them or changing analysis settings.'))
-    filter_key = (due_only, player, month, review_loss, review_dates)
-    if st.session_state.get('review_filter') != filter_key:
-        st.session_state.review_filter = filter_key
-        st.session_state.pop('active_id', None)
-        st.session_state.pop('review_cycle', None)
-        st.session_state.pop('board_feedback', None)
-        st.session_state.pop('library_page', None)
-    available = {p['id']: p for p in owned
-                 if (month == 'All months' or puzzle_month(p) == month)
-                 and (review_dates is None or dates_valid and within_dates(p.get('date'), *review_dates))
-                 and meets_review_loss(p, review_loss)}
-    return owned, available, due_only
+        practice_puzzles(library, repository, playback_engine, list(library['puzzles']), available, due_only)
 
 
 def practice_puzzles(library, repository, playback_engine, owned, available, due_only):
@@ -284,17 +172,17 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         st.session_state.review_cycle = cycle
     puzzles = [available[pid] for pid in cycle['ids'] if pid in available]
     if not puzzles:
-        if owned and not available:
-            st.info(tr('No saved puzzles match these filters. Lower the minimum review loss or choose another month or player.'))
+        if not available:
+            st.info(tr('No puzzles match your applied settings. Adjust the sidebar and click Start reviewing again.'))
         else:
-            st.info(tr('No puzzles are due. Generate puzzles or turn off the due-only filter.'))
+            st.info(tr('No puzzles are due. Turn off due-only in the sidebar and click Start reviewing to revisit saved puzzles.'))
         # An initially empty library may receive new puzzles on a later rerun.
         st.session_state.pop('review_cycle', None)
         return
     if cycle['state'] in ('complete', 'rest'):
         st.session_state.active_id = None
         st.success(tr('Cycle complete! Take a rest or practice your mistakes again.'))
-        st.caption(tr('Or you can select another month to review.'))
+        st.caption(tr('Or choose another date range in the sidebar and click Start reviewing.'))
         if cycle['state'] == 'rest':
             st.info(tr('Enjoy your break. Your progress is saved. Start over whenever you are ready.'))
         elif st.button(tr('Take a rest'), key='rest_cycle'):

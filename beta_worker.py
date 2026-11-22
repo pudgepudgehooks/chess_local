@@ -13,18 +13,19 @@ MAX_BYTES = 1024 * 1024
 MAX_GAMES = 5
 
 
-def validate_payload(username, texts, depth, threshold):
+def validate_payload(username, texts, depth, threshold, max_games=MAX_GAMES):
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username.strip()):
         raise ValueError('Enter a valid player username (letters, numbers, underscores or hyphens).')
-    if not 1 <= int(depth) <= 12 or not 50 <= int(threshold) <= 2000:
+    if not 1 <= int(depth) <= 12 or not 0 <= int(threshold) <= 2000:
         raise ValueError('Analysis settings exceed beta limits.')
     if sum(len(text.encode('utf-8')) for text in texts) > MAX_BYTES:
         raise ValueError('Beta uploads are limited to 1 MB.')
-    games = [game for text in texts for game in islice(read_games(text), MAX_GAMES + 1)]
+    games = [game for text in texts for game in islice(read_games(text), max_games + 1)]
     if not games:
         raise ValueError('No games found in this import.')
-    if len(games) > MAX_GAMES:
-        raise ValueError('Import at most five games per request.')
+    if len(games) > max_games:
+        raise ValueError('Import at most five games per request.' if max_games == MAX_GAMES else
+                         'Import at most 100 games when preparing a review.')
     name = username.strip().casefold()
     for game in games:
         if name not in [game.headers.get(c, '').casefold() for c in ['White', 'Black']]:

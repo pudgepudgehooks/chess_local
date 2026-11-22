@@ -3,6 +3,7 @@ from pathlib import Path
 from string import Formatter
 import unittest
 from unittest.mock import patch
+from ui_helpers import seed_review
 
 
 @unittest.skipUnless(importlib.util.find_spec('streamlit'), 'Streamlit is not installed')
@@ -22,7 +23,7 @@ class LanguageTests(unittest.TestCase):
         from puzzle_store import load_library
         library = load_library()
         with patch('puzzle_store.load_library', return_value=library), patch('puzzle_store.save_library') as save:
-            app = self.app().run(timeout=30)
+            app = seed_review(self.app(), library).run(timeout=30)
             app.text_input(key='analysis_username').set_value('MyPlayer')
             app.button(key='next_puzzle').click()
             app.run()
@@ -43,9 +44,10 @@ class LanguageTests(unittest.TestCase):
 
     def test_chinese_answer_validation(self):
         from puzzle_store import load_library
-        puzzle = load_library()['puzzles'][0]
-        with patch('drag_board.drag_board', return_value={'fen': puzzle['fen'], 'uci': '0000', 'event_id': 'invalid-zh'}) as component:
-            app = self.app()
+        library = load_library()
+        puzzle = library['puzzles'][0]
+        with patch('puzzle_store.load_library', return_value=library), patch('drag_board.drag_board', return_value={'fen': puzzle['fen'], 'uci': '0000', 'event_id': 'invalid-zh'}) as component:
+            app = seed_review(self.app(), library)
             app.query_params['lang'] = 'zh'
             app.run(timeout=30)
             self.assertFalse(app.exception)

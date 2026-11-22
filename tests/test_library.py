@@ -1,4 +1,6 @@
 from copy import deepcopy
+from datetime import date
+from ui_helpers import seed_review, choose_review
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -18,9 +20,9 @@ def fixture_library(count=18):
 
 
 class LibraryUITests(unittest.TestCase):
-    def app(self):
+    def app(self, library):
         from streamlit.testing.v1 import AppTest
-        return AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py'))
+        return seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library, username='alice')
 
     def open_ids(self, app):
         return [b.key for b in app.button if b.key and b.key.startswith('open-puzzle-')]
@@ -32,13 +34,13 @@ class LibraryUITests(unittest.TestCase):
         with patch('puzzle_store.load_library', return_value=library), \
              patch('puzzle_store.save_library') as save, \
              patch('drag_board.drag_board', return_value=None) as board:
-            app = self.app().run(timeout=30)
+            app = self.app(library).run(timeout=30)
             self.assertFalse(app.exception)
             self.assertNotIn('open-puzzle-p1', self.open_ids(app), 'due-only hides scheduled puzzles')
-            app.checkbox(key='due_only').uncheck().run()
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 9, 30))
             self.assertEqual(len(self.open_ids(app)), 12)
             app.number_input(key='library_page').set_value(2).run()
-            self.assertEqual(self.open_ids(app), [f'open-puzzle-p{i}' for i in range(12, 18)])
+            self.assertEqual(self.open_ids(app), [f'open-puzzle-p{i}' for i in range(12, 17)])
             self.assertEqual(library, before, 'browsing cannot alter review history')
             save.assert_not_called()
             app.button(key='open-puzzle-p15').click().run()
@@ -46,7 +48,7 @@ class LibraryUITests(unittest.TestCase):
             self.assertEqual(app.session_state['main_tab'], 'Practice')
             self.assertEqual(app.session_state['active_id'], 'p15')
             self.assertEqual(app.session_state['review_cycle']['ids'][0], 'p15')
-            self.assertEqual(len(set(app.session_state['review_cycle']['ids'])), 18)
+            self.assertEqual(len(set(app.session_state['review_cycle']['ids'])), 17)
             key = board.call_args.kwargs['key']
             board.return_value = dict(fen=chess.STARTING_FEN, uci='e2e4', event_id='solve-library-p15')
             app.run()
@@ -63,11 +65,9 @@ class LibraryUITests(unittest.TestCase):
         with patch('puzzle_store.load_library', return_value=library), \
              patch('puzzle_store.save_library') as save, \
              patch('drag_board.drag_board', return_value=None):
-            app = self.app().run(timeout=30)
+            app = self.app(library).run(timeout=30)
             app.number_input(key='library_page').set_value(2).run()
-            app.selectbox(key='puzzle_player').set_value('alice').run()
-            app.selectbox(key='review_month').set_value('2026-08').run()
-            app.number_input(key='review_loss').set_value(300).run()
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=300)
             self.assertEqual(app.number_input(key='library_page').value, 1)
             self.assertEqual(self.open_ids(app), [f'open-puzzle-p{i}' for i in range(0, 16, 2)])
             app.session_state.main_tab_name = 'Mistake library'
@@ -79,7 +79,7 @@ class LibraryUITests(unittest.TestCase):
             self.assertEqual(app.session_state['main_tab'], '练习')
             self.assertEqual(app.session_state['active_id'], 'p4')
             self.assertTrue(set(app.session_state['review_cycle']['ids']) <= {f'p{i}' for i in range(0, 16, 2)})
-            app.number_input(key='review_loss').set_value(1000).run()
+            choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=1000)
             self.assertFalse(self.open_ids(app))
             self.assertFalse(app.exception)
             save.assert_not_called()
