@@ -9,12 +9,15 @@ import chess
 import chess.engine
 import chess.svg
 import streamlit as st
-from chess_analysis import analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn, read_games, count_player_moves
+from chess_analysis import (analyze_game, engine_path, fetch_chesscom_pgn, fetch_lichess_pgn,
+                            fetch_chesscom_range, fetch_lichess_range, filter_games_by_date,
+                            read_games, count_player_moves)
 from puzzle_store import is_due, load_library, merge_puzzles, record_review, save_library, puzzle_month, meets_review_loss
 from drag_board import drag_board, consume_move, playback_frames
 from i18n import tr, language, language_selector, error_text, job_message
 from trainer_guide import show_guide
 from mistake_library import show_library
+from game_dates import game_date, validate_date_range, within_dates
 
 def evaluation(value):
     if not value:
@@ -77,6 +80,24 @@ def job_status(repository):
 TAB_NAMES = ['Practice', 'Mistake library', 'How it works']
 
 
+def date_range_picker(prefix, start_default, end_default, max_days=None):
+    containers = st.columns(2) if prefix == 'review' else [st.container(), st.container()]
+    with containers[0]:
+        start = st.date_input(tr('Review start date' if prefix == 'review' else 'Start date'),
+                              value=start_default, min_value=date(1900, 1, 1),
+                              max_value=date(2200, 12, 31), format='YYYY-MM-DD', key=f'{prefix}_start_date')
+    with containers[1]:
+        end = st.date_input(tr('Review end date' if prefix == 'review' else 'End date'),
+                            value=end_default, min_value=date(1900, 1, 1),
+                            max_value=date(2200, 12, 31), format='YYYY-MM-DD', key=f'{prefix}_end_date')
+    try:
+        validate_date_range(start, end, max_days=max_days)
+    except ValueError as exc:
+        st.error(error_text(exc))
+        return (start, end), False
+    return (start, end), True
+
+
 def remember_main_tab():
     st.session_state.main_tab_name = next(
         (name for name in TAB_NAMES if tr(name) == st.session_state.main_tab), 'Practice')
@@ -107,27 +128,37 @@ def trainer(repository, playback_engine, filters, review_tab, library_tab):
         st.stop()
     with st.sidebar:
         st.header(tr('Generate puzzles'))
-        source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'], format_func=partial(tr, _language=language()), key='analysis_source')
+        source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'],
+                          format_func=lambda value, lang=language(): tr({'Chess.com month': 'Chess.com', 'Lichess month': 'Lichess'}.get(value, value), _language=lang), key='analysis_source')
         username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
                                    'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username')
         executable = ''
         if repository is None:
             executable = st.text_input(tr('Stockfish executable path'), value=os.environ.get('STOCKFISH_PATH', ''), key='analysis_engine')
         uploaded = None
+        periods = ['All uploaded games', 'Date range'] if source == 'Upload PGN' else ['Month', 'Date range']
+        if st.session_state.get('analysis_period', periods[0]) not in periods:
+            st.session_state.analysis_period = periods[0]
+        period = st.selectbox(tr('Games to analyze'), periods,
+                              format_func=partial(tr, _language=language()), key='analysis_period')
+        analysis_dates, dates_valid = None, True
         if source == 'Upload PGN':
             uploaded = st.file_uploader(tr('PGN file'), type=['pgn'], key='analysis_upload')
-        else:
+        if period == 'Date range':
+            analysis_dates, dates_valid = date_range_picker('analysis', date.today().replace(day=1), date.today(), max_days=366)
+            st.caption(tr('Both dates are included. Games with unknown dates are excluded. Analysis ranges can cover up to 366 days.'))
+        elif source != 'Upload PGN':
             year = st.number_input(tr('Year'), 1900, 2200, date.today().year, key='analysis_year')
             month = st.number_input(tr('Month'), 1, 12, date.today().month, key='analysis_month')
         lichess_limit = 5
         if source == 'Lichess month':
-            st.caption(tr('Lichess imports completed standard games from the selected UTC month, newest first.'))
+            st.caption(tr('Lichess imports completed standard games from the selected UTC date range, newest first.') if analysis_dates else tr('Lichess imports completed standard games from the selected UTC month, newest first.'))
             if repository is None:
                 lichess_limit = st.number_input(tr('Maximum games to import'), 1, 100, 20, key='lichess_limit')
         depth = st.number_input(tr('Analysis depth'), 1, 12 if repository else 30, 10 if repository else 15, key='analysis_depth')
         threshold = st.number_input(tr('Minimum loss (centipawns)'), 50, 2000, 150, 50, key='analysis_threshold')
         st.caption(tr('100 centipawns = one pawn. Beta: up to five games per request, six requests per day.') if repository else tr('100 centipawns = one pawn. Analyzing all alternatives can take several minutes per game.'))
-        if st.button(tr('Generate puzzles'), key='generate_puzzles'):
+        if st.button(tr('Generate puzzles'), key='generate_puzzles', disabled=not dates_valid):
             try:
                 if not username.strip():
                     raise ValueError('Enter your username to select your moves.')
@@ -140,6 +171,12 @@ def trainer(repository, playback_engine, filters, review_tab, library_tab):
                         if repository and len(raw) > 1024 * 1024:
                             raise ValueError('Beta uploads are limited to 1 MB.')
                         texts = [raw.decode('utf-8-sig')]
+                        if analysis_dates:
+                            texts = filter_games_by_date(texts, *analysis_dates)
+                    elif analysis_dates:
+                        texts = (fetch_lichess_range(username, *analysis_dates, lichess_limit)
+                                 if source == 'Lichess month' else
+                                 fetch_chesscom_range(username, *analysis_dates, max_games=5 if repository else None))
                     elif source == 'Lichess month':
                         texts = fetch_lichess_pgn(username, year, month, lichess_limit)
                     else:
@@ -207,14 +244,25 @@ def review_filters(library):
         month_options.append('Unknown date')
     if st.session_state.get('review_month', 'All months') not in month_options:
         st.session_state.review_month = 'All months'
-    month = st.selectbox(tr('Saved game month'), month_options,
-                         format_func=partial(tr, _language=language()), key='review_month')
-    st.caption(tr('Filter by the month the game was played. Your saved puzzles and progress are kept.'))
+    period = st.selectbox(tr('Review dates'), ['Saved month', 'Date range'],
+                          format_func=partial(tr, _language=language()), key='review_period')
+    review_dates, dates_valid = None, True
+    if period == 'Saved month':
+        month = st.selectbox(tr('Saved game month'), month_options,
+                             format_func=partial(tr, _language=language()), key='review_month')
+        st.caption(tr('Filter by the month the game was played. Your saved puzzles and progress are kept.'))
+    else:
+        month = 'All months'
+        known_dates = [played for p in owned if (played := game_date(p.get('date'))) is not None
+                       and date(1900, 1, 1) <= played <= date(2200, 12, 31)]
+        review_dates, dates_valid = date_range_picker('review', min(known_dates, default=date.today().replace(day=1)),
+                                                       max(known_dates, default=date.today()))
+        st.caption(tr('Both dates are included. Undated puzzles are hidden in date-range mode. Your saved puzzles and progress are kept.'))
     review_loss = st.number_input(tr('Minimum review loss (centipawns)'), min_value=0, value=0,
                                   step=50, key='review_loss',
                                   help=tr('0 shows all saved puzzles, including mate-related mistakes without a numeric loss. Higher values show only puzzles with a recorded loss at or above this value.'))
     st.caption(tr('This filters saved puzzles without deleting them or changing analysis settings.'))
-    filter_key = (due_only, player, month, review_loss)
+    filter_key = (due_only, player, month, review_loss, review_dates)
     if st.session_state.get('review_filter') != filter_key:
         st.session_state.review_filter = filter_key
         st.session_state.pop('active_id', None)
@@ -223,6 +271,7 @@ def review_filters(library):
         st.session_state.pop('library_page', None)
     available = {p['id']: p for p in owned
                  if (month == 'All months' or puzzle_month(p) == month)
+                 and (review_dates is None or dates_valid and within_dates(p.get('date'), *review_dates))
                  and meets_review_loss(p, review_loss)}
     return owned, available, due_only
 
@@ -310,7 +359,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
                     except Exception:
                         logging.exception('Solution continuation unavailable')
                         result['frames'] = playback_frames(board, move, puzzle)
-                    message = 'Correct! Watch the continuation.'
+                    message = 'Correct! Use Forward and Back to review the continuation.'
                     if len(result['frames']) == 1 and not chess.Board(result['frames'][0]['fen']).is_game_over():
                         message = 'Correct! No continuation is available for this position.'
             except Exception as exc:

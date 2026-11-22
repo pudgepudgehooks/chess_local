@@ -1,8 +1,8 @@
 const {placement, BoardSession} = ChessBoardState;
 const board = document.getElementById('board'), status = document.getElementById('status');
 const ghost = document.getElementById('ghost'), promotion = document.getElementById('promotion');
-const replay = document.getElementById('replay');
-let args = null, session = null, selected = null, drag = null, suppressClick = false, timer = null;
+const navigation = document.getElementById('continuation'), back = document.getElementById('back'), forward = document.getElementById('forward');
+let args = null, session = null, selected = null, drag = null, suppressClick = false;
 const send = (type, data={}) => window.parent.postMessage({isStreamlitMessage:true, type, ...data}, '*');
 const t = (message, values={}) => (args?.labels?.[message] || message).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? `{${key}}`);
 function height() { send('streamlit:setFrameHeight', {height:document.getElementById('wrap').scrollHeight + 8}); }
@@ -33,34 +33,13 @@ function render() {
   }
   highlights();
   status.textContent = t(session.status);
-  if (session.solved && session.busy && session.frames.length > 1) {
+  if (session.solved && session.index >= 0 && session.index < session.frames.length - 1) {
     status.textContent += ' '+t('Step {step}/{total}: {move}', {step:session.index+1, total:session.frames.length, move:session.frames[session.index].san});
   }
-  replay.hidden = !session.solved || session.frames.length < 2;
-  replay.disabled = session.busy; replay.textContent = t('Replay solution');
+  navigation.hidden = !session.solved;
+  back.disabled = session.index < 0; back.textContent = '← '+t('Back');
+  forward.disabled = session.index >= session.frames.length - 1; forward.textContent = t('Forward')+' →';
   height();
-}
-function play() {
-  clearTimeout(timer);
-  if (!session.busy || !session.solved) return;
-  timer = setTimeout(() => {
-    const frame = session.frames[session.index+1];
-    const from = board.querySelector(`[data-square="${frame.uci.slice(0,2)}"]`);
-    const rect = from?.getBoundingClientRect();
-    const asset = args.assets[placement(session.fen)[frame.uci.slice(0,2)]];
-    if (!session.advance()) return;
-    render();
-    const destination = board.querySelector(`[data-square="${frame.uci.slice(2,4)}"]`);
-    if (rect && asset && destination && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const end = destination.getBoundingClientRect(); destination.classList.add('moving-hidden');
-      ghost.innerHTML=asset.svg; ghost.style.width=rect.width+'px'; ghost.style.height=rect.height+'px';
-      ghost.style.left=(end.x+end.width/2)+'px'; ghost.style.top=(end.y+end.height/2)+'px'; ghost.hidden=false;
-      ghost.animate([{translate:`${rect.x-end.x}px ${rect.y-end.y}px`}, {translate:'0px 0px'}], {duration:300}).onfinish=() => {
-        ghost.hidden=true; destination.classList.remove('moving-hidden');
-      };
-    }
-    play();
-  }, 1100);
 }
 function submit(uci) {
   const eventId = crypto.randomUUID();
@@ -125,13 +104,15 @@ board.addEventListener('pointerup', e => {
 });
 board.addEventListener('pointercancel', deselect);
 document.addEventListener('keydown', e => { if (e.key==='Escape') deselect(); });
-replay.onclick=() => { if (session.replay()) { render(); play(); } };
+back.onclick=() => { if (session.retreat()) render(); };
+forward.onclick=() => { if (session.advance()) render(); };
 window.addEventListener('message', e => {
   if (e.source!==window.parent || e.data.type!=='streamlit:render') return;
   const incoming=e.data.args;
   const contextChanged=!session || session.originalFen!==incoming.fen;
-  if (contextChanged) { clearTimeout(timer); session=new BoardSession(incoming.fen); }
+  if (contextChanged) session=new BoardSession(incoming.fen);
   args=incoming;
+  if (e.data.theme?.textColor) document.documentElement.style.setProperty('--app-text', e.data.theme.textColor);
   for (const [name, variable] of Object.entries({
     'square light':'--board-light', 'square dark':'--board-dark', 'margin':'--board-border',
     'square light lastmove':'--board-light-last', 'square dark lastmove':'--board-dark-last',
@@ -144,7 +125,7 @@ window.addEventListener('message', e => {
   const received=session.receive(args.response);
   // An unrelated rerun must preserve an unacknowledged drop or current playback step.
   if (contextChanged || received || !drag) render();
-  if (received) { deselect(); play(); }
+  if (received) deselect();
 });
 new ResizeObserver(height).observe(document.getElementById('wrap'));
 send('streamlit:componentReady',{apiVersion:1}); height();

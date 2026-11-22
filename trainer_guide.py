@@ -9,19 +9,19 @@ SECTIONS = [
         'Click Review this puzzle to open that position in Practice with a fresh board. The selected puzzle starts a new cycle, followed by the other matching puzzles. Browsing previews does not count as an attempt or change saved progress. Turn off due-only to choose puzzles scheduled for later.',
     ]),
     ('Generate puzzles from your games', [
-        'In the sidebar, choose Chess.com month, Lichess month, or Upload PGN. Enter the chess username whose moves you want analyzed, then select a year and month or upload a PGN file. The engine looks for mistakes made by that player.',
+        'In the sidebar, choose Chess.com, Lichess, or Upload PGN and enter the chess username to analyze. Games to analyze lets you select a month or a Date range using the start and end calendars. Uploaded PGNs can also be filtered by date. Both dates are included; unknown dates are excluded in range mode. Analysis ranges can cover up to 366 days, and beta requests still analyze at most five games.',
         'Minimum loss (centipawns) controls which evaluation drops are saved during analysis. 100 centipawns equals one pawn; 150 means 1.5 pawns and 300 means 3 pawns. Mate-related mistakes are tracked separately. Analysis depth controls how deeply the engine searches; higher settings take longer.',
         'Click Generate puzzles and watch the progress bar. It reaches 100% after puzzles are saved. Generating another month adds puzzles to your library and keeps existing review history.',
     ]),
     ('Choose which saved mistakes to review', [
         'Puzzle owner means the Chess.com or Lichess username whose mistakes generated the puzzles. It is separate from your app login. All players includes every chess username in your saved library.',
-        'Saved game month filters by when a game was played. Choose a year-month such as 2026-08, All months, or Unknown date for undated puzzles. Switching months keeps your saved puzzles and review history.',
+        'Review dates lets you choose Saved month or Date range. Saved game month includes All months and Unknown date. Date range uses Review start date and Review end date, includes both days, and hides undated puzzles. These filters apply to Practice and Mistake library, including shuffled restarts, without deleting puzzles or review history.',
         'Minimum review loss (centipawns) filters puzzles already saved. Set 300 to show recorded losses of at least 300, or 0 to show all losses, including mate-related puzzles without a numeric loss. Lowering this filter restores hidden puzzles; it does not change the analysis setting or delete anything.',
         'Only show puzzles due for review hides puzzles scheduled for later. Turn it off to revisit them now. Owner, month, minimum review loss, and due-only filters work together. Changing a filter starts a fresh review cycle.',
     ]),
     ('Answer a puzzle on the board', [
         'Drag a piece to its destination. For promotion, choose the new piece. Your piece stays on its destination while the answer is checked. The app accepts the saved best move and accepted alternatives.',
-        'An incorrect answer resets the board so you can try again. The error clears when you begin another attempt. A correct answer automatically plays the saved continuation when available; Replay solution plays it again without recording another attempt.',
+        'An incorrect answer resets the board so you can try again. The error clears when you begin another attempt. After a correct answer, the piece stays where you moved it. Click Forward or Back to move through the continuation one step at a time. Back can return to the original position. Nothing plays automatically, and navigating the line does not record more attempts.',
         'Hint points to the piece to move. Reveal solution and original mistake shows your original move, the engine line, and the evaluation change. Open original game is available when a game link was saved. Click Next puzzle when ready to continue.',
     ]),
     ('Finish a cycle or take a break', [

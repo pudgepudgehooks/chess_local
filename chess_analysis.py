@@ -7,13 +7,14 @@ from pathlib import Path
 import shutil
 import time
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
 import chess
 import chess.engine
 import chess.pgn
 import requests
+from game_dates import validate_date_range, within_dates
 
 
 def engine_path(value=None):
@@ -44,6 +45,35 @@ def read_games(text):
         yield game
 
 
+def filter_games_by_date(texts, start, end):
+    validate_date_range(start, end, max_days=366)
+    return [game.accept(chess.pgn.StringExporter(headers=True, variations=False, comments=False))
+            for text in texts for game in read_games(text)
+            if within_dates(game.headers.get('Date'), start, end)]
+
+
+def fetch_chesscom_range(username, start, end, max_games=None):
+    """Read monthly archives newest first, filtering dates before applying limits."""
+    validate_date_range(start, end, max_days=366)
+    year, month = end.year, end.month
+    selected = []
+    while (year, month) >= (start.year, start.month):
+        try:
+            archive = fetch_chesscom_pgn(username, year, month)
+        except requests.HTTPError as exc:
+            if exc.response is None or exc.response.status_code != 404:
+                raise
+            archive = {'games': []}
+        for entry in reversed(archive['games']):
+            if entry.get('rules', 'chess') != 'chess' or not entry.get('pgn'):
+                continue
+            selected.extend(filter_games_by_date([entry['pgn']], start, end))
+            if max_games is not None and len(selected) >= max_games:
+                return selected[:max_games]
+        year, month = (year - 1, 12) if month == 1 else (year, month - 1)
+    return selected
+
+
 def fetch_lichess_pgn(username, year, month, max_games=20):
     """Fetch bounded, completed standard games in a UTC calendar month."""
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username.strip()):
@@ -52,6 +82,23 @@ def fetch_lichess_pgn(username, year, month, max_games=20):
         raise ValueError('Choose a valid Lichess month (2013 or later) and 1–100 games.')
     start = datetime(year, month, 1, tzinfo=timezone.utc)
     end = datetime(year + (month == 12), 1 if month == 12 else month + 1, 1, tzinfo=timezone.utc)
+    return _fetch_lichess_window(username, start, end, max_games)
+
+
+def fetch_lichess_range(username, start, end, max_games=20):
+    validate_date_range(start, end, max_days=366)
+    if start.year < 2013 or end.year > 2200:
+        raise ValueError('Choose a Lichess date range between 2013 and 2200.')
+    start_time = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
+    end_time = datetime(end.year, end.month, end.day, tzinfo=timezone.utc) + timedelta(days=1)
+    return filter_games_by_date(_fetch_lichess_window(username, start_time, end_time, max_games), start, end)
+
+
+def _fetch_lichess_window(username, start, end, max_games):
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username.strip()):
+        raise ValueError('Enter a valid player username (letters, numbers, underscores or hyphens).')
+    if not 1 <= max_games <= 100:
+        raise ValueError('Choose a valid Lichess month (2013 or later) and 1–100 games.')
     params = {
         'since': max(1356998400070, int(start.timestamp() * 1000)),
         'until': int(end.timestamp() * 1000) - 1, 'max': max_games,

@@ -36,24 +36,28 @@
       this.handledId = response.event_id; this.pendingId = null;
       this.frames = response.frames || []; this.index = 0;
       this.solved = response.status === 'correct' && this.frames.length > 0;
-      this.busy = this.solved && this.frames.length > 1;
+      this.busy = false;
       this.fen = this.solved ? this.frames[0].fen : this.originalFen;
       this.uci = this.solved ? this.frames[0].uci : null;
-      this.status = response.message || (this.solved ? 'Correct! Watch the continuation.' : 'The answer is incorrect, please try again');
+      this.correctMessage = response.message || 'Correct! Use Forward and Back to review the continuation.';
+      this.status = this.solved ? this.correctMessage : response.message || 'The answer is incorrect, please try again';
       return true;
     }
     advance() {
       if (!this.solved || this.index + 1 >= this.frames.length) return false;
-      this.index++;
-      this.fen = this.frames[this.index].fen; this.uci = this.frames[this.index].uci;
-      this.busy = this.index + 1 < this.frames.length;
-      if (!this.busy) this.status = 'Click Next Puzzle to proceed.';
-      return true;
+      return this.goTo(this.index + 1);
     }
-    replay() {
-      if (!this.solved || this.frames.length < 2) return false;
-      this.index = 0; this.fen = this.frames[0].fen; this.uci = this.frames[0].uci;
-      this.busy = true; this.status = 'Correct! Watch the continuation.';
+    retreat() {
+      if (!this.solved || this.index < 0) return false;
+      return this.goTo(this.index - 1);
+    }
+    goTo(index) {
+      if (!this.solved || index < -1 || index >= this.frames.length) return false;
+      this.index = index;
+      this.fen = index < 0 ? this.originalFen : this.frames[index].fen;
+      this.uci = index < 0 ? null : this.frames[index].uci;
+      this.status = index < 0 ? 'Starting position.' :
+        this.frames.length > 1 && index === this.frames.length - 1 ? 'Click Next Puzzle to proceed.' : this.correctMessage;
       return true;
     }
   }
