@@ -5,9 +5,9 @@ import time
 import uuid
 
 from sqlalchemy import (Column, Float, Integer, MetaData, String, Table, Text,
-                        create_engine, select, update, func)
+                        create_engine, select, update, delete, func)
 from sqlalchemy.exc import IntegrityError
-from puzzle_store import record_review
+from puzzle_store import record_review, deduplicate_puzzles, merge_puzzles
 
 meta = MetaData()
 puzzles = Table('beta_puzzles', meta,
@@ -44,9 +44,23 @@ class BetaStore:
             pass
 
     def load(self, owner):
-        with self.engine.connect() as db:
-            rows = db.execute(select(puzzles.c.data).where(puzzles.c.owner == owner).order_by(puzzles.c.id))
-            return {'version': 1, 'puzzles': [json.loads(r[0]) for r in rows]}
+        with self.engine.begin() as db:
+            db.execute(select(guard).where(guard.c.id == 1).with_for_update()).first()
+            return self._load_library(db, owner)
+
+    def _load_library(self, db, owner):
+        """Compact historical duplicate rows under the review/generation lock."""
+        rows = db.execute(select(puzzles.c.data).where(puzzles.c.owner == owner).order_by(puzzles.c.id))
+        unique, aliases = deduplicate_puzzles([json.loads(r[0]) for r in rows])
+        if aliases:
+            for puzzle in unique:
+                db.execute(update(puzzles).where(puzzles.c.owner == owner, puzzles.c.id == puzzle['id'])
+                           .values(data=json.dumps(puzzle)))
+            for duplicate, canonical in aliases.items():
+                db.execute(update(events).where(events.c.owner == owner, events.c.puzzle_id == duplicate)
+                           .values(puzzle_id=canonical))
+                db.execute(delete(puzzles).where(puzzles.c.owner == owner, puzzles.c.id == duplicate))
+        return {'version': 1, 'puzzles': unique}
 
     def review(self, owner, puzzle_id, correct, event):
         with self.engine.begin() as db:
@@ -137,18 +151,18 @@ class BetaStore:
                 return
             added = 0
             if error is None:
-                for puzzle in found:
-                    old = db.execute(select(puzzles.c.data).where(puzzles.c.owner == job['owner'], puzzles.c.id == puzzle['id'])).first()
-                    if old:
-                        review = json.loads(old[0]).get('review')
-                        if review is not None:
-                            puzzle = dict(puzzle, review=review)
-                        db.execute(update(puzzles).where(puzzles.c.owner == job['owner'], puzzles.c.id == puzzle['id']).values(data=json.dumps(puzzle)))
+                library = self._load_library(db, job['owner'])
+                before = {p['id']: json.dumps(p) for p in library['puzzles']}
+                added = merge_puzzles(library, found)
+                for puzzle in library['puzzles']:
+                    data = json.dumps(puzzle)
+                    if puzzle['id'] in before:
+                        if before[puzzle['id']] != data:
+                            db.execute(update(puzzles).where(puzzles.c.owner == job['owner'], puzzles.c.id == puzzle['id']).values(data=data))
                     else:
-                        db.execute(puzzles.insert().values(owner=job['owner'], id=puzzle['id'], data=json.dumps(puzzle)))
-                        added += 1
+                        db.execute(puzzles.insert().values(owner=job['owner'], id=puzzle['id'], data=data))
             db.execute(update(jobs).where(jobs.c.id == job['id']).values(state='failed' if error else 'done',
-                message=error or f'Added {added} puzzles. Refresh your library to review them.', payload='{}'))
+                message=error or f'Added {added} puzzles. Your library is up to date.', payload='{}'))
 
 
 class UserLibrary:

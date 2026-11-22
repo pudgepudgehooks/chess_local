@@ -102,20 +102,23 @@ class ProgressUITests(unittest.TestCase):
             self.assertEqual(len(app.get('progress')), 0, 'past completion must stay hidden on login')
             self.assertNotIn('Added 7 puzzles', ' '.join(item.value for item in app.markdown))
             app.session_state.analysis_status_job = ('alice', 'new')
+            app.session_state.review_cycle = {'state': 'rest'}
+            app.session_state.active_id = 'old-puzzle'
+            app.session_state.board_feedback = {'key': 'old-puzzle'}
             app.run()
             self.assertEqual(len(app.get('progress')), 1)
             text = ' '.join(item.value for item in app.markdown)
             self.assertIn('Added 7 puzzles', text)
             self.assertNotIn('Added 3 puzzles', text)
-            self.assertEqual(app.button(key='refresh_library').label, 'Update puzzle library')
-            app.session_state.review_cycle = {'state': 'rest'}
-            app.session_state.active_id = 'old-puzzle'
-            app.session_state.board_feedback = {'key': 'old-puzzle'}
-            app.button(key='refresh_library').click().run()
+            self.assertFalse(any(b.key == 'refresh_library' for b in app.button))
+            self.assertEqual(app.session_state['analysis_library_loaded_job'], ('alice', 'new'))
             self.assertFalse(app.exception)
             self.assertNotIn('review_cycle', app.session_state)
             self.assertNotIn('active_id', app.session_state)
             self.assertNotIn('board_feedback', app.session_state)
+            app.session_state.review_cycle = {'state': 'active'}
+            app.run()
+            self.assertEqual(app.session_state['review_cycle'], {'state': 'active'}, 'completed job reloads the library only once')
 
     def test_running_job_completion_is_shown_only_in_observing_session(self):
         from streamlit.testing.v1 import AppTest

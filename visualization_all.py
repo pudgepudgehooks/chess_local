@@ -59,16 +59,20 @@ def job_status(repository):
         selected = next((job for job in recent if job['state'] in ('queued', 'running')), None)
         if selected is not None:
             st.session_state.analysis_status_job = (repository.owner, selected['id'])
+    if selected is not None and selected['state'] == 'done':
+        completed = (repository.owner, selected['id'])
+        if st.session_state.get('analysis_library_loaded_job') != completed:
+            # The worker commits puzzles before marking the job done. Refresh the
+            # whole app once so its library, filters, and preview grid reload too.
+            st.session_state.analysis_library_loaded_job = completed
+            for key in ['review_cycle', 'active_id', 'board_feedback', 'library_page']:
+                st.session_state.pop(key, None)
+            st.rerun()
     for job in [selected] if selected is not None else []:
         st.caption(tr('{state} · {count} games analyzed', state=tr(job['state'].capitalize()), count=job['completed']))
         fraction, label = progress_display(job)
         st.progress(fraction, text=label)
         st.write(job_message(job['message']))
-    if st.button(tr('Update puzzle library'), key='refresh_library'):
-        st.session_state.pop('review_cycle', None)
-        st.session_state.pop('active_id', None)
-        st.session_state.pop('board_feedback', None)
-        st.rerun()
 
 TAB_NAMES = ['Practice', 'Mistake library', 'How it works']
 
@@ -145,6 +149,7 @@ def trainer(repository, playback_engine, filters, review_tab, library_tab):
                     if repository:
                         job_id = repository.submit(username, texts, depth, threshold)
                         st.session_state.analysis_status_job = (repository.owner, job_id)
+                        st.session_state.pop('analysis_library_loaded_job', None)
                     else:
                         games = [game for text in texts for game in read_games(text)]
                         found = []

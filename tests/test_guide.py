@@ -35,6 +35,6 @@ class GuideUITests(unittest.TestCase):
         app = AppTest.from_string('from trainer_guide import show_guide\nshow_guide(online=True)').run(timeout=30)
         self.assertFalse(app.exception)
         text = '\n'.join(item.value for item in app.markdown)
-        self.assertIn('Update puzzle library', text)
+        self.assertIn('updates your library automatically', text)
         self.assertIn('five games per request', text)
         self.assertNotIn('Stockfish executable path', text)

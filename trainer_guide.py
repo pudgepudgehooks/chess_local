@@ -49,7 +49,7 @@ def show_guide(online=False):
         st.subheader(tr('Online beta and your saved library'))
         st.write(tr('Sign in with the username and password assigned by the app administrator. Each app account has its own saved puzzle library and review history. Entering a chess username chooses which player to analyze; it does not verify that you own that chess account.'))
         st.write(tr('The beta analyzes up to five games per request, with up to six requests per day. Selecting a month does not analyze every game in that month. Lichess imports public, completed standard games, newest first, using UTC month boundaries.'))
-        st.write(tr('Analysis runs in the background. After it finishes, click Update puzzle library to load the new puzzles and start a new cycle with your current filters. This does not reanalyze games or delete puzzles. Old completion messages stay hidden when you sign in.'))
+        st.write(tr('Analysis runs in the background. Generate puzzles saves new mistakes and updates your library automatically when analysis finishes. Existing puzzles are updated without adding duplicates, and their review history is kept. Your current filters still apply. Old completion messages stay hidden when you sign in.'))
         st.write(tr('You can stay signed in for up to 12 hours. A full browser refresh requires signing in again, but your saved puzzles and review history remain.'))
     else:
         st.subheader(tr('Local setup and storage'))

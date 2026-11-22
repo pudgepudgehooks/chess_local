@@ -97,6 +97,27 @@ class StoreTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('BETA_TEST_DATABASE_URL'), 'Dedicated PostgreSQL test URL not configured')
 class PostgresConcurrencyTests(unittest.TestCase):
+    def test_concurrent_analysis_commits_do_not_duplicate_positions(self):
+        import chess
+        from beta_store import BetaStore, jobs
+        store = BetaStore(os.environ['BETA_TEST_DATABASE_URL'])
+        owner = uuid.uuid4().hex
+        pending = [dict(id=uuid.uuid4().hex, owner=owner, token=uuid.uuid4().hex) for _ in range(2)]
+        try:
+            with store.engine.begin() as db:
+                for job in pending:
+                    db.execute(jobs.insert().values(**job, state='running', fingerprint=job['id'],
+                                                   payload='{}', created=time.time()))
+            def finish(job):
+                store.finish(job, [dict(id=job['id'], username='Me',
+                    game_url='https://lichess.org/abcd1234/white', fen=chess.STARTING_FEN,
+                    played='e2e4', best_move='d2d4')])
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                list(executor.map(finish, pending))
+            self.assertEqual(len(store.load(owner)['puzzles']), 1)
+        finally:
+            store.engine.dispose()
+
     def test_concurrent_reviews_are_not_lost(self):
         from beta_store import BetaStore
         store = BetaStore(os.environ['BETA_TEST_DATABASE_URL'])

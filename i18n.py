@@ -3,6 +3,8 @@ import re
 import streamlit as st
 
 ZH = {
+    'Added {count} puzzles. Your library is up to date.': '新增 {count} 道练习题。题库已自动更新。',
+    'Analysis runs in the background. Generate puzzles saves new mistakes and updates your library automatically when analysis finishes. Existing puzzles are updated without adding duplicates, and their review history is kept. Your current filters still apply. Old completion messages stay hidden when you sign in.': '分析在后台运行。点击“生成练习题”后，分析完成时会自动保存新错题并更新题库。已有题目会更新而不会重复添加，复习记录也会保留。当前筛选条件仍然适用，登录时不会显示历史分析完成提示。',
     'Mistake library': '错题库',
     'Browse starting positions and choose a puzzle to practice. The filters above apply here too; turn off due-only to see puzzles scheduled for later.': '浏览初始局面并选择要练习的题目。上方筛选条件同样适用；关闭仅显示到期题目即可查看尚未到期的错题。',
     'No saved puzzles match the current filters. Try another month, lower the review loss, or turn off due-only.': '没有符合当前条件的已保存题目。请选择其他月份、降低复习最低失分，或关闭仅显示到期题目。',
@@ -222,8 +224,8 @@ def error_text(error):
 
 
 def job_message(message):
-    match = re.fullmatch(r'Added (\d+) puzzles\. Refresh your library to review them\.', message)
-    return tr('Added {count} puzzles. Refresh your library to review them.', count=match[1]) if match else tr(message)
+    match = re.fullmatch(r'Added (\d+) puzzles\. (?:Refresh your library to review them\.|Your library is up to date\.)', message)
+    return tr('Added {count} puzzles. Your library is up to date.', count=match[1]) if match else tr(message)
 
 
 def language_selector():
