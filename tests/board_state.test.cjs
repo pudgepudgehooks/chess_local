@@ -1,5 +1,15 @@
 const assert = require('node:assert/strict');
-const {BoardSession, placement} = require('../board_component/board_state.js');
+const {BoardSession, placement, pieceTransitions} = require('../board_component/board_state.js');
+assert.deepEqual(pieceTransitions({e2:'P'}, {e4:'P'}), [{from:'e2',to:'e4'}]);
+assert.deepEqual(pieceTransitions({e4:'P',d5:'p'}, {d5:'P'}), [{from:'e4',to:'d5'}]);
+assert.deepEqual(pieceTransitions({d5:'P'}, {e4:'P',d5:'p'}), [{from:'d5',to:'e4'},{to:'d5'}]);
+assert.deepEqual(pieceTransitions({e1:'K',h1:'R'}, {g1:'K',f1:'R'}), [{from:'e1',to:'g1'},{from:'h1',to:'f1'}]);
+assert.deepEqual(pieceTransitions({g1:'K',f1:'R'}, {e1:'K',h1:'R'}), [{from:'g1',to:'e1'},{from:'f1',to:'h1'}]);
+assert.deepEqual(pieceTransitions({e7:'P',f8:'r'}, {f8:'N'}), [{from:'e7',to:'f8'}]);
+assert.deepEqual(pieceTransitions({f8:'N'}, {e7:'P',f8:'r'}), [{from:'f8',to:'e7'},{to:'f8'}]);
+assert.deepEqual(pieceTransitions({a2:'p'}, {a1:'q'}), [{from:'a2',to:'a1'}]);
+assert.deepEqual(pieceTransitions({e5:'P',d5:'p'}, {d6:'P'}), [{from:'e5',to:'d6'}]);
+assert.deepEqual(pieceTransitions({e4:'P'}, {e4:'P'}), []);
 const start = '8/8/8/8/8/8/4P3/4K2k w - - 0 1';
 const moved = '8/8/8/8/4P3/8/8/4K2k b - - 0 1';
 const next = '8/8/8/8/4P3/8/7k/4K3 w - - 1 2';

@@ -1,8 +1,9 @@
-const {placement, BoardSession} = ChessBoardState;
+const {placement, pieceTransitions, BoardSession} = ChessBoardState;
 const board = document.getElementById('board'), status = document.getElementById('status');
 const ghost = document.getElementById('ghost'), promotion = document.getElementById('promotion');
 const navigation = document.getElementById('continuation'), back = document.getElementById('back'), forward = document.getElementById('forward');
 let args = null, session = null, selected = null, drag = null, suppressClick = false;
+let renderedFen = null, renderedWhite = null;
 const send = (type, data={}) => window.parent.postMessage({isStreamlitMessage:true, type, ...data}, '*');
 const t = (message, values={}) => (args?.labels?.[message] || message).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? `{${key}}`);
 function height() { send('streamlit:setFrameHeight', {height:document.getElementById('wrap').scrollHeight + 8}); }
@@ -14,22 +15,53 @@ function highlights() {
 }
 function deselect() {
   selected = null; drag = null; ghost.hidden = true; promotion.hidden = true;
+  board.querySelectorAll('.dragging').forEach(square => square.classList.remove('dragging'));
   highlights(); height();
 }
-function render() {
+function render({animate=true, drop=null}={}) {
   const pieces = placement(session.fen);
   const files = args.white ? 'abcdefgh' : 'hgfedcba', ranks = args.white ? '87654321' : '12345678';
-  board.replaceChildren();
-  for (let row=0; row<8; row++) for (let col=0; col<8; col++) {
-    const square = files[col]+ranks[row], piece = args.assets[pieces[square]];
-    const button = document.createElement('button'); button.type = 'button'; button.dataset.square = square;
-    button.className = 'square' + ((files.charCodeAt(col)-97+Number(ranks[row]))%2 === 1 ? ' dark' : '');
-    if (session.uci && [session.uci.slice(0,2), session.uci.slice(2,4)].includes(square)) button.classList.add('last');
-    button.setAttribute('aria-label', square+' '+(piece ? piece.label : t('empty')));
-    if (piece) button.innerHTML = piece.svg;
-    if (col === 0) { const label=document.createElement('span'); label.className='coord rank'; label.textContent=ranks[row]; button.append(label); }
-    if (row === 7) { const label=document.createElement('span'); label.className='coord file'; label.textContent=files[col]; button.append(label); }
-    board.append(button);
+  const changed = renderedFen !== session.fen || renderedWhite !== args.white;
+  if (changed) {
+    const previous = renderedFen && renderedWhite === args.white ? placement(renderedFen) : {};
+    const origins = {};
+    for (const square of board.children) {
+      const svg = square.querySelector('svg');
+      if (svg) origins[square.dataset.square] = svg.getBoundingClientRect();
+    }
+    board.replaceChildren();
+    for (let row=0; row<8; row++) for (let col=0; col<8; col++) {
+      const square = files[col]+ranks[row], piece = args.assets[pieces[square]];
+      const button = document.createElement('button'); button.type = 'button'; button.dataset.square = square;
+      button.className = 'square' + ((files.charCodeAt(col)-97+Number(ranks[row]))%2 === 1 ? ' dark' : '');
+      if (session.uci && [session.uci.slice(0,2), session.uci.slice(2,4)].includes(square)) button.classList.add('last');
+      button.setAttribute('aria-label', square+' '+(piece ? piece.label : t('empty')));
+      if (piece) button.innerHTML = piece.svg;
+      if (col === 0) { const label=document.createElement('span'); label.className='coord rank'; label.textContent=ranks[row]; button.append(label); }
+      if (row === 7) { const label=document.createElement('span'); label.className='coord file'; label.textContent=files[col]; button.append(label); }
+      board.append(button);
+    }
+    renderedFen = session.fen; renderedWhite = args.white;
+    if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      for (const {from, to} of pieceTransitions(previous, pieces)) {
+        const square = board.querySelector(`[data-square="${to}"]`), svg = square.querySelector('svg');
+        const origin = drop?.to === to ? drop.rect : origins[from];
+        if (!svg || !origin || !svg.animate) continue;
+        const destination = svg.getBoundingClientRect();
+        square.style.zIndex = '2';
+        const animation = svg.animate([
+          {transform:`translate(${origin.left - destination.left}px, ${origin.top - destination.top}px)`},
+          {transform:'translate(0, 0)'},
+        ], {duration:drop?.to === to ? 110 : 220, easing:'cubic-bezier(0.22, 0.61, 0.36, 1)'});
+        animation.onfinish = animation.oncancel = () => { square.style.zIndex = ''; };
+      }
+    }
+  } else {
+    // Keep in-flight animations alive when Streamlit acknowledges the same move.
+    for (const square of board.children) {
+      const piece = args.assets[pieces[square.dataset.square]];
+      square.setAttribute('aria-label', square.dataset.square+' '+(piece ? piece.label : t('empty')));
+    }
   }
   highlights();
   status.textContent = t(session.status, args.response?.message_values || {});
@@ -41,24 +73,24 @@ function render() {
   forward.disabled = session.index >= session.frames.length - 1; forward.textContent = t('Forward')+' →';
   height();
 }
-function submit(uci) {
+function submit(uci, dropRect=null) {
   const eventId = crypto.randomUUID();
   if (!session.start(uci, eventId, args.previews)) return;
-  deselect(); render();
+  deselect(); render({drop:dropRect ? {to:uci.slice(2,4), rect:dropRect} : null});
   ChessMoveSound.play();
   send('streamlit:setComponentValue', {value:{uci, fen:args.fen, event_id:eventId}, dataType:'json'});
 }
-function attempt(from, to) {
+function attempt(from, to, dropRect=null) {
   if (session.busy || session.solved) return;
   const moves = args.legal.filter(m => m.slice(0,4) === from+to);
   if (!moves.length) { deselect(); session.status='Illegal move. Try another destination.'; render(); return; }
-  if (moves.length === 1) { submit(moves[0]); return; }
+  if (moves.length === 1) { submit(moves[0], dropRect); return; }
   promotion.hidden=false;
   const choices=document.getElementById('choices'); choices.replaceChildren();
   for (const code of ['q','r','b','n']) {
     const move=moves.find(m => m[4] === code); if (!move) continue;
     const button=document.createElement('button'); button.textContent=t({q:'Queen',r:'Rook',b:'Bishop',n:'Knight'}[code]);
-    button.onclick=() => submit(move); choices.append(button);
+    button.onclick=() => submit(move, dropRect); choices.append(button);
   }
   const cancel=document.createElement('button'); cancel.textContent=t('Cancel'); cancel.onclick=deselect; choices.append(cancel);
   status.textContent=t('Choose your promotion piece.'); height();
@@ -89,18 +121,22 @@ board.addEventListener('pointermove', e => {
   if (drag.moved) {
     selected=drag.from; highlights();
     const origin=board.querySelector(`[data-square="${drag.from}"]`), rect=origin.getBoundingClientRect();
-    ghost.innerHTML=args.pieces[drag.from].svg; ghost.style.width=rect.width+'px'; ghost.style.height=rect.height+'px';
+    origin.classList.add('dragging');
+    ghost.innerHTML=args.pieces[drag.from].svg; ghost.style.width=(rect.width*0.88)+'px'; ghost.style.height=(rect.height*0.88)+'px';
     ghost.hidden=false; ghost.style.left=e.clientX+'px'; ghost.style.top=e.clientY+'px';
   }
 });
 board.addEventListener('pointerup', e => {
   if (!drag) return;
-  const current=drag; drag=null; ghost.hidden=true;
+  const current=drag;
+  const dropRect = !ghost.hidden ? ghost.querySelector('svg')?.getBoundingClientRect() : null;
+  drag=null; ghost.hidden=true;
+  board.querySelectorAll('.dragging').forEach(square => square.classList.remove('dragging'));
   if (board.hasPointerCapture(e.pointerId)) board.releasePointerCapture(e.pointerId);
   if (!current.moved) return;
   suppressClick=true; setTimeout(() => suppressClick=false,0);
   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-square]');
-  if (target && target.dataset.square !== current.from) attempt(current.from,target.dataset.square);
+  if (target && target.dataset.square !== current.from) attempt(current.from,target.dataset.square,dropRect);
   else deselect();
 });
 board.addEventListener('pointercancel', deselect);
@@ -125,7 +161,7 @@ window.addEventListener('message', e => {
   promotion.querySelector('strong').textContent=t('Promote to:');
   const received=session.receive(args.response);
   // An unrelated rerun must preserve an unacknowledged drop or current playback step.
-  if (contextChanged || received || !drag) render();
+  if (contextChanged || received || !drag) render({animate:!contextChanged});
   if (received) deselect();
 });
 new ResizeObserver(height).observe(document.getElementById('wrap'));

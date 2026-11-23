@@ -11,6 +11,22 @@
     });
     return squares;
   }
+  function pieceTransitions(before, after) {
+    const removed = Object.keys(before).filter(square => before[square] !== after[square]);
+    const added = Object.keys(after).filter(square => before[square] !== after[square]);
+    return added.map(to => {
+      let index = removed.findIndex(from => before[from] === after[to]);
+      // Promotions (and undoing them) change the piece's symbol.
+      if (index < 0) index = removed.findIndex(from => {
+        const old = before[from], next = after[to];
+        const white = old === old.toUpperCase();
+        if (white !== (next === next.toUpperCase()) || Math.abs(from.charCodeAt(0) - to.charCodeAt(0)) > 1) return false;
+        return (old.toLowerCase() === 'p' && /[qrbn]/i.test(next) && from[1] === (white ? '7' : '2') && to[1] === (white ? '8' : '1')) ||
+          (next.toLowerCase() === 'p' && /[qrbn]/i.test(old) && from[1] === (white ? '8' : '1') && to[1] === (white ? '7' : '2'));
+      });
+      return index < 0 ? {to} : {from: removed.splice(index, 1)[0], to};
+    });
+  }
   class BoardSession {
     constructor(fen) {
       this.originalFen = this.fen = fen;
@@ -61,7 +77,7 @@
       return true;
     }
   }
-  const api = {placement, BoardSession};
+  const api = {placement, pieceTransitions, BoardSession};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ChessBoardState = api;
 })(globalThis);
