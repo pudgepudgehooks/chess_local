@@ -45,6 +45,7 @@ function submit(uci) {
   const eventId = crypto.randomUUID();
   if (!session.start(uci, eventId, args.previews)) return;
   deselect(); render();
+  ChessMoveSound.play();
   send('streamlit:setComponentValue', {value:{uci, fen:args.fen, event_id:eventId}, dataType:'json'});
 }
 function attempt(from, to) {
@@ -104,8 +105,8 @@ board.addEventListener('pointerup', e => {
 });
 board.addEventListener('pointercancel', deselect);
 document.addEventListener('keydown', e => { if (e.key==='Escape') deselect(); });
-back.onclick=() => { if (session.retreat()) render(); };
-forward.onclick=() => { if (session.advance()) render(); };
+back.onclick=() => { if (session.retreat()) { render(); ChessMoveSound.play(); } };
+forward.onclick=() => { if (session.advance()) { render(); ChessMoveSound.play(); } };
 window.addEventListener('message', e => {
   if (e.source!==window.parent || e.data.type!=='streamlit:render') return;
   const incoming=e.data.args;
