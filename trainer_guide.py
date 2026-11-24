@@ -5,7 +5,7 @@ from i18n import tr
 
 SECTIONS = [
     ('Browse your mistake library', [
-        'Open Mistake library after Start reviewing to browse starting-board previews from your applied selection. Cards show game details, losses, attempt counts, and review status. Use Library page for more results.',
+        'Open Mistake library after Start reviewing to browse starting-board previews from your applied selection. Cards show game details, losses, attempt counts, and review status. Use the numbered page links or Previous and Next above or below the cards to browse more results. The current page is highlighted.',
         'Click Review this puzzle to open that position in Practice with a fresh board. The selected puzzle starts a new cycle, followed by the other matching puzzles. Browsing previews does not count as an attempt or change saved progress. Turn off due-only to choose puzzles scheduled for later.',
     ]),
     ('Start a review', [

@@ -3,6 +3,11 @@ import re
 import streamlit as st
 
 ZH = {
+    'Previous': '上一页',
+    'Next': '下一页',
+    'Current page: {page}': '当前第 {page} 页',
+    'Go to page {page}': '前往第 {page} 页',
+    'Open Mistake library after Start reviewing to browse starting-board previews from your applied selection. Cards show game details, losses, attempt counts, and review status. Use the numbered page links or Previous and Next above or below the cards to browse more results. The current page is highlighted.': '点击“开始复习”后，打开错题库可浏览已应用选择中的初始棋盘预览。卡片显示对局详情、失分、作答次数和复习状态。点击卡片上方或下方的数字页码、“上一页”或“下一页”可查看更多题目，当前页会突出显示。',
     "Good move! This is an acceptable alternative. The engine's top choice is {move}. Use Forward and Back to review the continuation.": '好棋！这是可以接受的另一种着法。引擎的首选是 {move}。请点击“向前”和“向后”查看后续着法。',
     "Good move! This is an acceptable alternative. The engine's top choice is {move}. No continuation is available for this position.": '好棋！这是可以接受的另一种着法。引擎的首选是 {move}。此局面暂无可用的后续着法。',
     "You do not have to find the engine's single top choice. During analysis, moves evaluated within 30 centipawns (0.3 pawns) of the best move are saved as acceptable alternatives. This tolerance is set by the app, with no extra setting to choose. It is separate from Minimum loss, which decides which game mistakes become puzzles.": '不必只找到引擎的唯一首选。分析时，评估比最佳着法低不超过 30 厘兵（0.3 个兵）的着法也会保存为可接受的答案。这个容差由应用设定，无需额外选择。它与“最低失分”不同，后者决定对局中的哪些失误会生成题目。',

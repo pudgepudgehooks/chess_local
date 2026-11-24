@@ -13,6 +13,32 @@ from board_theme import BOARD_COLORS
 PAGE_SIZE = 12
 
 
+def change_page(page):
+    st.session_state.library_page = page
+    st.session_state.next_main_tab = 'Mistake library'
+
+
+def page_links(page, pages, location):
+    if pages <= 1:
+        return
+    first = max(1, min(page - 4, pages - 9))
+    numbers = sorted({1, pages, *range(first, min(pages + 1, first + 10))})
+    with st.container(horizontal=True, horizontal_alignment='center', gap='small'):
+        st.button(tr('Previous'), key=f'library-{location}-previous', type='tertiary',
+                  disabled=page == 1, on_click=change_page, args=(page - 1,))
+        previous = 0
+        for number in numbers:
+            if previous and number > previous + 1:
+                st.markdown('…')
+            st.button(str(number), key=f'library-{location}-page-{number}',
+                      type='primary' if number == page else 'tertiary', disabled=number == page,
+                      help=tr('Current page: {page}', page=number) if number == page else tr('Go to page {page}', page=number),
+                      on_click=change_page, args=(number,))
+            previous = number
+        st.button(tr('Next'), key=f'library-{location}-next', type='tertiary',
+                  disabled=page == pages, on_click=change_page, args=(page + 1,))
+
+
 def show_library(puzzles):
     """Return the selected puzzle ID; browsing never records a review."""
     st.header(tr('Mistake library'))
@@ -25,10 +51,9 @@ def show_library(puzzles):
     counts[1].metric(tr('Due now'), sum(is_due(p) for p in puzzles))
     counts[2].metric(tr('Previously attempted'), sum(bool(p.get('review', {}).get('attempts')) for p in puzzles))
     pages = math.ceil(len(puzzles) / PAGE_SIZE)
-    if st.session_state.get('library_page', 1) > pages:
-        st.session_state.library_page = pages
-    page = st.number_input(tr('Library page'), min_value=1, max_value=pages,
-                           value=1, step=1, key='library_page')
+    page = max(1, min(st.session_state.get('library_page', 1), pages))
+    st.session_state.library_page = page
+    page_links(page, pages, 'top')
     start = (page - 1) * PAGE_SIZE
     st.caption(tr('Showing {first}–{last} of {total} puzzles', first=start + 1,
                   last=min(start + PAGE_SIZE, len(puzzles)), total=len(puzzles)))
@@ -61,4 +86,5 @@ def show_library(puzzles):
                 if st.button(tr('Review this puzzle'), key=f"open-puzzle-{puzzle['id']}",
                              disabled=not valid, width='stretch'):
                     return puzzle['id']
+    page_links(page, pages, 'bottom')
     return None
