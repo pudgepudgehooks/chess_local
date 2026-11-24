@@ -51,7 +51,7 @@ Old Google-owned puzzle records are not deleted, but new local accounts do not a
 
 ## Analysis behavior
 
-Chess.com and Lichess monthly imports, PGN uploads, English/Chinese controls, drag-and-drop, and saved review schedules continue to work. The beta allows five standard games/request, 400 plies/game, 1 MB total, six requests/account/day, one active request/account and queue capacity 20. One global Stockfish job runs at a time (one thread, 32 MB hash, requested depth at most 12, 0.15 seconds/position). Jobs have a ten-minute analysis deadline and ten-second engine protocol timeout.
+Chess.com and Lichess monthly imports, PGN uploads, English/Chinese controls, drag-and-drop, and saved review schedules continue to work. The beta allows five standard games/request, 400 plies/game, 1 MB total, no daily analysis quota, one active request/account and queue capacity 20. One global Stockfish job runs at a time (one thread, 32 MB hash, requested depth at most 12, 0.15 seconds/position). Jobs have a ten-minute analysis deadline and ten-second engine protocol timeout.
 
 Community Cloud can sleep/restart. A signed-in visitor starts the worker; queued jobs resume, and interrupted jobs recover after their 15-minute lease expires. Finished/failed jobs erase PGN payloads. Other game context, job metadata and review events remain in PostgreSQL; backups and retention/deletion are the administrator's responsibility. Keep the database role scoped to this app. Move analysis to dedicated workers if the application grows.
 

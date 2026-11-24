@@ -119,7 +119,7 @@ def setup_sidebar(library, repository=None, progress_label=None):
                 import_limit = st.number_input(tr('Maximum games to fetch'), 1, 100, 100, key='analysis_import_limit')
         st.caption(tr('Both dates are included. Sidebar edits apply only when you click Start reviewing.'))
         if repository:
-            st.caption(tr('Fetches up to 100 recent games. Each start analyzes at most five uncovered games; six analysis requests per day. Cached games do not need Stockfish again.'))
+            st.caption(tr('Fetches up to 100 recent games. Each start analyzes at most five uncovered games; no daily analysis quota. Cached games do not need Stockfish again.'))
         pending = st.session_state.get('pending_review_setup')
         if st.button(tr('Start reviewing'), key='start_review', disabled=not valid or bool(pending), width='stretch'):
             st.session_state.pop('review_start_error', None)

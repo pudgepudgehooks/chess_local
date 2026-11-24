@@ -64,12 +64,14 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(len(self.store.load('alice')['puzzles']), 1)
         self.assertEqual(self.store.claim()['owner'], 'bob')
 
-    def test_daily_quota_and_failure_retry(self):
-        for i in range(6):
-            self.store.submit('alice', dict(self.payload, depth=i + 1))
-            self.store.finish(self.store.claim(), [], error='Test failure')
-        with self.assertRaises(ValueError):
-            self.store.submit('alice', dict(self.payload, depth=12))
+    def test_no_daily_quota_and_failure_retry(self):
+        ids = []
+        for i in range(8):
+            ids.append(self.store.submit('alice', dict(self.payload, threshold=150 + i)))
+            self.store.finish(self.store.claim(), [], error='Test failure' if i % 2 == 0 else None)
+        retry = self.store.submit('alice', self.payload)
+        self.assertEqual(len(set(ids + [retry])), 9)
+        self.assertEqual(self.store.claim()['id'], retry)
 
     def test_restart_retains_queued_job(self):
         from beta_store import BetaStore

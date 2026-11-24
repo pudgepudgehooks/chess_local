@@ -111,9 +111,6 @@ class BetaStore:
                 jobs.c.owner == owner, jobs.c.state.in_(['queued', 'running'])))
             if active:
                 raise ValueError('You already have an analysis queued or running.')
-            daily = db.scalar(select(func.count()).select_from(jobs).where(jobs.c.owner == owner, jobs.c.created > now - 86400))
-            if daily >= 6:
-                raise ValueError('Beta limit: six analysis requests per day.')
             queued = db.scalar(select(func.count()).select_from(jobs).where(jobs.c.state.in_(['queued', 'running'])))
             if queued >= 20:
                 raise ValueError('The beta analysis queue is full. Please try again later.')

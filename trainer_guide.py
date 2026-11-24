@@ -51,7 +51,7 @@ def show_guide(online=False):
     if online:
         st.subheader(tr('Online beta and your saved library'))
         st.write(tr('Sign in with the username and password assigned by the app administrator. Each app account has its own saved puzzle library and review history. Entering a chess username chooses which player to analyze; it does not verify that you own that chess account.'))
-        st.write(tr('The beta fetches up to 100 recent games and analyzes at most five uncovered games per start, with six analysis requests per day. Already covered games are skipped. If fetched games remain, click Start reviewing again for the next batch. A wide range does not guarantee every game has been fetched; narrow the dates to reach older games.'))
+        st.write(tr('The beta fetches up to 100 recent games and analyzes at most five uncovered games per start, with no daily analysis quota. Already covered games are skipped. If fetched games remain, click Start reviewing again for the next batch. A wide range does not guarantee every game has been fetched; narrow the dates to reach older games.'))
         st.write(tr('If analysis is needed, the review opens automatically after it finishes and saves successfully. Fully covered games open without a new analysis job. Failed analysis is not marked reusable, and the previous applied selection remains available. Repeated analysis updates existing puzzles without adding copies or replacing review history.'))
         st.write(tr('You can stay signed in for up to 12 hours. A full browser refresh requires signing in again, but your saved puzzles and review history remain.'))
     else:
