@@ -2,6 +2,7 @@ const {placement, pieceTransitions, BoardSession} = ChessBoardState;
 const board = document.getElementById('board'), status = document.getElementById('status');
 const ghost = document.getElementById('ghost'), promotion = document.getElementById('promotion');
 const navigation = document.getElementById('continuation'), back = document.getElementById('back'), forward = document.getElementById('forward');
+const retry = document.getElementById('retry');
 let args = null, session = null, selected = null, drag = null, suppressClick = false;
 let renderedFen = null, renderedWhite = null;
 const send = (type, data={}) => window.parent.postMessage({isStreamlitMessage:true, type, ...data}, '*');
@@ -83,6 +84,9 @@ function render({animate=true, drop=null}={}) {
     status.textContent += ' '+t('Step {step}/{total}: {move}', {step:session.index+1, total:session.frames.length, move:session.frames[session.index].san});
   }
   navigation.hidden = !session.solved;
+  retry.hidden = !session.retryRequired;
+  retry.setAttribute('aria-label', t('Try again'));
+  retry.title = t('Reset the board and try again');
   back.disabled = session.index < 0; back.textContent = '← '+t('Back');
   forward.disabled = session.index >= session.frames.length - 1; forward.textContent = t('Forward')+' →';
   height();
@@ -95,7 +99,7 @@ function submit(uci, dropRect=null) {
   send('streamlit:setComponentValue', {value:{uci, fen:args.fen, event_id:eventId}, dataType:'json'});
 }
 function attempt(from, to, dropRect=null) {
-  if (session.busy || session.solved) return;
+  if (session.busy || session.solved || session.retryRequired) return;
   const moves = args.legal.filter(m => m.slice(0,4) === from+to);
   if (!moves.length) { deselect(); session.status='Illegal move. Try another destination.'; render(); return; }
   if (moves.length === 1) { submit(moves[0], dropRect); return; }
@@ -110,7 +114,7 @@ function attempt(from, to, dropRect=null) {
   status.textContent=t('Choose your promotion piece.'); height();
 }
 function select(square) {
-  if (session.busy || session.solved) return;
+  if (session.busy || session.solved || session.retryRequired) return;
   if (selected && selected !== square) { attempt(selected,square); return; }
   if (args.pieces[square]?.own) {
     session.beginAttempt();
@@ -123,7 +127,7 @@ board.addEventListener('click', e => {
   const square=e.target.closest('[data-square]'); if (square) select(square.dataset.square);
 });
 board.addEventListener('pointerdown', e => {
-  if (session.busy || session.solved) return;
+  if (session.busy || session.solved || session.retryRequired) return;
   const square=e.target.closest('[data-square]'); if (!square || e.button !== 0) return;
   const from=square.dataset.square; if (!args.pieces[from]?.own) return;
   session.beginAttempt(); status.textContent=t(session.status);
@@ -158,6 +162,7 @@ board.addEventListener('pointercancel', deselect);
 document.addEventListener('keydown', e => { if (e.key==='Escape') deselect(); });
 back.onclick=() => { if (session.retreat()) { render(); ChessMoveSound.play(); } };
 forward.onclick=() => { if (session.advance()) { render(); ChessMoveSound.play(); } };
+retry.onclick=() => { if (session.retry()) { deselect(); render(); } };
 window.addEventListener('message', e => {
   if (e.source!==window.parent || e.data.type!=='streamlit:render') return;
   const incoming=e.data.args;

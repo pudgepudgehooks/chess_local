@@ -14,7 +14,9 @@
 #status{margin:8px 0;min-height:22px;font-size:14px;color:var(--app-text,#212121)}#promotion{background:#fff3e6;padding:10px;border:1px solid var(--board-dark);border-radius:5px;margin:8px 0}
 #promotion button,#continuation button{padding:9px;margin:3px;border:1px solid var(--board-dark);border-radius:4px;background:white;cursor:pointer}#continuation button:disabled{opacity:.45;cursor:default}
 #ghost{position:fixed;pointer-events:none;z-index:10;transform:translate(-50%,-50%)}#ghost svg{width:100%;height:100%}
+#retry{display:grid;place-items:center;width:160px;max-width:100%;height:64px;margin:10px auto;padding:8px;border:1px solid #ff8068;border-bottom:4px solid #b92520;border-radius:16px;background:linear-gradient(#ff4b38,#e82220);color:white;cursor:pointer;box-shadow:inset 0 2px 0 #ffffff3b}
+#retry[hidden]{display:none}#retry svg{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}#retry:hover{filter:brightness(1.08)}#retry:active{transform:translateY(2px)}#retry:focus-visible{outline:3px solid #2966d6;outline-offset:3px}
 </style></head>
-<body><div id="wrap"><div id="board" role="group" aria-label="Chess puzzle board"></div><div id="promotion" hidden><strong></strong><div id="choices"></div></div><div id="status" role="status" aria-live="polite"></div><div id="continuation" hidden><button id="back" type="button"></button><button id="forward" type="button"></button></div></div><div id="ghost" hidden></div>
+<body><div id="wrap"><div id="board" role="group" aria-label="Chess puzzle board"></div><div id="promotion" hidden><strong></strong><div id="choices"></div></div><div id="status" role="status" aria-live="polite"></div><button id="retry" type="button" aria-label="Try again" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6a8 8 0 1 1-2 8M3 3v6h6"/></svg></button><div id="continuation" hidden><button id="back" type="button"></button><button id="forward" type="button"></button></div></div><div id="ghost" hidden></div>
 <script src="board_state.js"></script><script src="move_sound.js"></script><script src="board.js"></script>
 </body></html>

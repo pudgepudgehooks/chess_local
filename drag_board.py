@@ -60,6 +60,7 @@ def drag_board(board, key, response=None):
         labels={key: tr(key) for key in [
             'Chess puzzle board', 'empty',
             'Correct answer', 'Incorrect answer',
+            'Try again', 'Reset the board and try again',
             'Move submitted. See the result below the board.', 'Illegal move. Try another destination.',
             'Promote to:', 'Queen', 'Rook', 'Bishop', 'Knight', 'Cancel', 'Choose your promotion piece.',
             'Checking move…', 'The answer is incorrect, please try again',

@@ -35,18 +35,19 @@
       this.frames = []; this.index = 0;
       this.status = '';
       this.feedback = null;
+      this.retryRequired = false;
     }
     get visibleFeedback() {
       return !this.solved || this.index === 0 ? this.feedback : null;
     }
     beginAttempt() {
-      if (this.busy || this.solved) return false;
+      if (this.busy || this.solved || this.retryRequired) return false;
       this.status = '';
       this.feedback = null;
       return true;
     }
     start(uci, eventId, previews) {
-      if (this.busy || this.solved || !previews[uci]) return false;
+      if (this.busy || this.solved || this.retryRequired || !previews[uci]) return false;
       this.fen = previews[uci]; this.uci = uci; this.pendingId = eventId;
       this.busy = true; this.status = 'Checking move…';
       this.feedback = null;
@@ -56,16 +57,27 @@
       if (!response || response.event_id === this.handledId ||
           (this.pendingId && response.event_id !== this.pendingId)) return false;
       const answeredMove = response.uci || this.uci || response.frames?.[0]?.uci;
+      const attemptedFen = response.attempt_fen || (this.pendingId ? this.fen : null);
       this.handledId = response.event_id; this.pendingId = null;
       this.frames = response.frames || []; this.index = 0;
       this.solved = response.status === 'correct' && this.frames.length > 0;
       this.feedback = (this.solved || response.status === 'incorrect') && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(answeredMove || '')
         ? {square:answeredMove.slice(2,4), status:response.status} : null;
       this.busy = false;
-      this.fen = this.solved ? this.frames[0].fen : this.originalFen;
-      this.uci = this.solved ? this.frames[0].uci : null;
+      this.retryRequired = response.status === 'incorrect' && !!this.feedback && !!attemptedFen;
+      this.fen = this.solved ? this.frames[0].fen : this.retryRequired ? attemptedFen : this.originalFen;
+      this.uci = this.solved ? this.frames[0].uci : this.retryRequired ? answeredMove : null;
       this.correctMessage = response.message || 'Correct! Use Forward and Back to review the continuation.';
       this.status = this.solved ? this.correctMessage : response.message || 'The answer is incorrect, please try again';
+      return true;
+    }
+    retry() {
+      if (!this.retryRequired) return false;
+      this.retryRequired = false;
+      this.fen = this.originalFen;
+      this.uci = null;
+      this.feedback = null;
+      this.status = '';
       return true;
     }
     advance() {

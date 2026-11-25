@@ -95,6 +95,10 @@ class TrainerUITests(unittest.TestCase):
             self.assertFalse(app.error, 'board feedback must not leave a persistent error banner')
             self.assertEqual(component.call_args.kwargs['response']['status'], 'incorrect')
             self.assertEqual(component.call_args.kwargs['response']['frames'], [])
+            import chess
+            attempted = chess.Board(first['fen'])
+            attempted.push_uci(first['played'])
+            self.assertEqual(component.call_args.kwargs['response']['attempt_fen'], attempted.fen())
             component.return_value = {'fen': first['fen'], 'uci': first['best_move'], 'event_id': 'correct'}
             app.run()
             self.assertTrue(app.success)

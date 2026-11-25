@@ -224,6 +224,10 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         move = dragged_move
         result = {'event_id': event['event_id'], 'status': 'incorrect', 'frames': [],
                   'uci': move.uci() if move is not None else None}
+        if move is not None:
+            attempted_board = board.copy()
+            attempted_board.push(move)
+            result['attempt_fen'] = attempted_board.fen()
         message = 'The answer is incorrect, please try again'
         if move is None:
             result['status'] = 'incorrect'
