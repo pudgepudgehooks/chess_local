@@ -85,14 +85,17 @@ class StoreTests(unittest.TestCase):
     def test_payload_limits_and_worker(self):
         from beta_worker import validate_payload, run_job
         payload = validate_payload('Me', [PGN], 5, 150)
-        for username, texts, depth in [('Me', [PGN] * 6, 5), ('NoOne', [PGN], 5),
+        self.assertEqual(len(validate_payload('Me', [PGN] * 100, 5, 150)['texts']), 100)
+        for username, texts, depth in [('Me', [PGN] * 101, 5), ('NoOne', [PGN], 5),
                                        ('Me', ['x' * (1024 * 1024 + 1)], 5), ('Me', [PGN], 30)]:
             with self.assertRaises(ValueError):
                 validate_payload(username, texts, depth, 150)
+        payload = validate_payload('Me', [PGN] * 7, 5, 150)
         self.store.submit('alice', payload)
         with patch('beta_worker.chess.engine.SimpleEngine.popen_uci') as start, \
              patch('beta_worker.analyze_game', return_value=[self.puzzle]) as analyze:
             run_job(self.store, self.store.claim(), 'test-engine')
+            self.assertEqual(analyze.call_count, 7, 'worker processes beyond the old five-game cap')
             self.assertEqual(analyze.call_args.kwargs['position_time'], 0.15)
         self.assertEqual(self.store.recent_jobs('alice')[0]['state'], 'done')
 

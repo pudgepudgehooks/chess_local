@@ -39,7 +39,7 @@ class BetaGateUITests(unittest.TestCase):
                     app.button(key='help_page').click().run()
                     self.assertFalse(app.exception)
                     self.assertFalse(any(t.label == 'Password' for t in app.text_input))
-                    self.assertTrue(any('five uncovered games per start' in item.value for item in app.markdown))
+                    self.assertTrue(any('all uncovered games from that selection' in item.value for item in app.markdown))
                     app.button(key='back_to_signin').click().run()
                     self.assertFalse(app.exception)
                     self.assertEqual(len(app.text_input), 2)

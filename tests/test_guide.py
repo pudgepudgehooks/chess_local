@@ -51,7 +51,7 @@ class GuideUITests(unittest.TestCase):
         self.assertFalse(app.exception)
         text = '\n'.join(item.value for item in app.markdown)
         self.assertIn('review opens automatically', text)
-        self.assertIn('five uncovered games per start', text)
+        self.assertIn('all uncovered games from that selection', text)
         self.assertIn('30 centipawns (0.3 pawns)', text)
         self.assertIn('same review schedule', text)
         self.assertIn('Low uses a minimum loss of 150 centipawns; High uses 300', text)

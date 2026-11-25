@@ -42,23 +42,27 @@ class AnalysisCoverageTests(unittest.TestCase):
         self.assertEqual(plan(200, texts=[pgn().replace('e4 e5 *', 'e4 e5 2. Nf3 *')])['selected'], 1)
         self.assertEqual(plan(200, texts=[pgn(2)])['selected'], 1)
 
-    def test_beta_zero_puzzle_games_cache_and_new_games_fill_next_batch(self):
+    def test_beta_analyzes_all_uncovered_games_and_reuses_zero_puzzle_games(self):
         with tempfile.TemporaryDirectory() as directory:
             store = BetaStore('sqlite:///' + str(Path(directory) / 'cache.db'))
             try:
                 texts = [pgn(i) for i in range(7)]
                 first = store.prepare_analysis('alice', 'Me', texts, 10, 100)
-                self.assertEqual((first['reused'], first['selected'], first['remaining']), (0, 5, 2))
+                self.assertEqual((first['reused'], first['selected'], first['remaining']), (0, 7, 0))
                 store.finish(store.claim(), [])
                 second = store.prepare_analysis('alice', 'Me', texts, 10, 200)
-                self.assertEqual((second['reused'], second['selected'], second['remaining']), (5, 2, 0))
+                self.assertEqual((second['reused'], second['selected'], second['remaining']), (7, 0, 0))
+                self.assertIsNone(second['job_id'])
+                texts.append(pgn(7))
+                second = store.prepare_analysis('alice', 'Me', texts, 10, 200)
+                self.assertEqual((second['reused'], second['selected'], second['remaining']), (7, 1, 0))
                 store.finish(store.claim(), [])
                 third = store.prepare_analysis('alice', 'Me', texts, 10, 200)
                 self.assertIsNone(third['job_id'])
-                self.assertEqual(third['reused'], 7)
+                self.assertEqual(third['reused'], 8)
                 self.assertEqual(store.coverage('bob'), [])
                 lower = store.prepare_analysis('alice', 'Me', texts, 10, 50)
-                self.assertEqual(lower['selected'], 5)
+                self.assertEqual(lower['selected'], 8)
                 store.finish(store.claim(), [], error='Test failure')
                 self.assertFalse(any(r['threshold'] == 50 for r in store.coverage('alice')))
             finally:

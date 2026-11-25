@@ -93,7 +93,7 @@ class BetaStore:
         from beta_worker import validate_payload
         payload = validate_payload(username, texts, depth, threshold, max_games=100)
         username = payload['username']
-        plan = plan_analysis(username, texts, self.coverage(owner), depth, threshold, BETA_POLICY, limit=5)
+        plan = plan_analysis(username, texts, self.coverage(owner), depth, threshold, BETA_POLICY)
         selected = [item['text'] for item in plan.pop('items')]
         plan['job_id'] = self.submit(owner, dict(payload, texts=selected), allow_completed=False) if selected else None
         return plan

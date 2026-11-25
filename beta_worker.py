@@ -10,7 +10,7 @@ from player_names import normalize_player_username
 
 LOG = logging.getLogger(__name__)
 MAX_BYTES = 1024 * 1024
-MAX_GAMES = 5
+MAX_GAMES = 100
 
 
 def validate_payload(username, texts, depth, threshold, max_games=MAX_GAMES):
@@ -23,8 +23,7 @@ def validate_payload(username, texts, depth, threshold, max_games=MAX_GAMES):
     if not games:
         raise ValueError('No games found in this import.')
     if len(games) > max_games:
-        raise ValueError('Import at most five games per request.' if max_games == MAX_GAMES else
-                         'Import at most 100 games when preparing a review.')
+        raise ValueError(f'Import at most {max_games} games per request.')
     name = username.strip().casefold()
     for game in games:
         if name not in [game.headers.get(c, '').casefold() for c in ['White', 'Black']]:
