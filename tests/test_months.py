@@ -47,7 +47,7 @@ class MonthTests(unittest.TestCase):
             self.assertEqual(app.session_state['active_id'], 'sep')
             self.assertNotEqual(app.session_state['review_cycle']['token'], august_token)
             self.assertIsNone(board.call_args.kwargs['response'])
-            app.selectbox(key='ui_language').set_value('zh').run()
+            app.button(key='language_toggle').click().run()
             self.assertEqual(app.session_state['review_setup']['start'], date(2026, 9, 1))
             choose_review(app, 'bob', date(2026, 7, 1), date(2026, 7, 31))
             self.assertEqual(app.session_state['review_cycle']['ids'], ['bob'])

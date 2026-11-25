@@ -58,7 +58,7 @@ class ReviewSetupUITests(unittest.TestCase):
             app.button(key='start_review').click().run()
             self.assertEqual(app.session_state['review_setup']['threshold'], 200, 'custom overrides High')
             self.assertEqual(app.session_state['review_cycle']['ids'], ['loss-250', 'loss-350'])
-            app.selectbox(key='ui_language').set_value('zh').run()
+            app.button(key='language_toggle').click().run()
             self.assertEqual(app.checkbox(key='analysis_use_custom_loss').label, '使用自定义最低失分')
             self.assertEqual(app.radio(key='analysis_loss_level').value, 'High')
             self.assertEqual(app.number_input(key='analysis_threshold').value, 200)

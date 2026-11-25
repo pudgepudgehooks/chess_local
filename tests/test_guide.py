@@ -23,7 +23,7 @@ class GuideUITests(unittest.TestCase):
             app.button(key='next_puzzle').click().run()
             active = app.session_state['active_id']
             token = app.session_state['review_cycle']['token']
-            app.selectbox(key='ui_language').set_value('zh').run()
+            app.button(key='language_toggle').click().run()
             self.assertFalse(app.exception)
             self.assertEqual([tab.proto.label for tab in app.get('tab')], ['练习', '错题库', '使用说明'])
             self.assertEqual(app.session_state['active_id'], active)

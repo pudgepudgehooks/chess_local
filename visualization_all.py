@@ -89,8 +89,8 @@ def remember_main_tab():
 
 def main(repository=None, playback_engine=None):
     if repository is None:
-        st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
         language_selector()
+        st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
     st.title(tr('Chess Mistake Trainer'))
     name = st.session_state.pop('next_main_tab', st.session_state.get('main_tab_name', 'Practice'))
     st.session_state.main_tab_name = name

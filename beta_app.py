@@ -55,8 +55,8 @@ def account_screen(accounts):
 
 
 def main():
-    st.set_page_config(page_title=tr('Chess Trainer · Private Beta'), page_icon='♟')
     language_selector()
+    st.set_page_config(page_title=tr('Chess Trainer · Private Beta'), page_icon='♟')
     try:
         settings = st.secrets['beta']
         url = str(settings['database_url'])

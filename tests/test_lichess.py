@@ -99,7 +99,7 @@ class LichessUITests(unittest.TestCase):
             app.text_input(key='analysis_username').set_value('Me')
             app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1))
             app.date_input(key='analysis_end_date').set_value(date(2026, 8, 31))
-            app.selectbox(key='ui_language').set_value('zh').run()
+            app.button(key='language_toggle').click().run()
             self.assertFalse(app.exception)
             self.assertEqual(app.text_input(key='analysis_username').label, '你的 Lichess 用户名')
             self.assertEqual(app.radio(key='analysis_source').value, 'Lichess month')

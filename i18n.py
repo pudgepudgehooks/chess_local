@@ -133,7 +133,7 @@ ZH = {
     'A correct answer schedules the puzzle after 1 day, then 2, 4, 8, 16, and up to 30 days as your correct streak grows. An incorrect answer resets the streak and schedules it after 10 minutes.': '答对后，下次复习时间为 1 天后；随着连续答对次数增加，间隔依次为 2、4、8、16 天，最长 30 天。答错会重置连续答对次数，并安排在 10 分钟后复习。',
     'If you answer incorrectly and then retry correctly, the correct answer replaces the 10-minute schedule with a 1-day review. A due time is not a reminder: there is no automatic pop-up, and missed puzzles are not added back into the current cycle. Start a new due-only cycle to pick up puzzles that have become due.': '如果先答错再答对，正确答案会将原来的 10 分钟后复习改为 1 天后复习。到期时间不会触发自动弹窗，也不会将错题重新加入当前队列。开始新一轮仅复习到期题目的练习，才能加入新到期的题目。',
     'Switch languages': '切换语言',
-    'Use Language / 语言 in the sidebar to switch between English and Simplified Chinese. Your selected filters and current review cycle stay in place. Chess move notation and player usernames stay unchanged.': '使用侧栏的 Language / 语言 切换英文和简体中文。已选筛选条件和当前练习队列会保留，棋步记谱和棋谱用户名保持原样。',
+    'Click the language icon in the upper-right corner to switch between English and Simplified Chinese. Your selected filters and current review cycle stay in place. Chess move notation and player usernames stay unchanged.': '点击右上角的语言图标切换英文和简体中文。已选筛选条件和当前练习队列会保留，棋步记谱和棋谱用户名保持原样。',
     'Online beta and your saved library': '在线内测与已保存题库',
     'Sign in with the username and password assigned by the app administrator. Each app account has its own saved puzzle library and review history. Entering a chess username chooses which player to analyze; it does not verify that you own that chess account.': '使用管理员分配的用户名和密码登录。每个应用账号拥有独立的题库和复习记录。输入棋谱用户名只是选择要分析的棋手，并不会验证该棋类平台账号是否属于你。',
     'Analysis runs in the background. After it finishes, click Update puzzle library to load the new puzzles and start a new cycle with your current filters. This does not reanalyze games or delete puzzles. Old completion messages stay hidden when you sign in.': '分析在后台运行。完成后点击“更新题库”，即可加载新题，并按当前筛选条件开始新一轮练习。此操作不会重新分析棋谱或删除题目。登录时不会显示历史分析完成提示。',
@@ -310,8 +310,20 @@ def language_selector():
     if 'ui_language' not in st.session_state:
         requested = st.query_params.get('lang', 'en')
         st.session_state.ui_language = requested if requested in ('en', 'zh') else 'en'
-    def remember():
+    st.html('''<style>
+    [data-testid="stToolbarActions"]{anchor-name:--chess-toolbar-actions}
+    .st-key-language_toggle{position:fixed;top:0.375rem;right:18rem;width:2.5rem;z-index:1000002}
+    .st-key-language_toggle button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
+    @media(max-width:768px){.st-key-language_toggle{right:5rem}}
+    @supports(position-anchor:--chess-toolbar-actions){
+      .st-key-language_toggle{position-anchor:--chess-toolbar-actions;top:calc(anchor(center, 1.625rem) - 1.25rem);right:calc(anchor(left, 5rem) + 0.5rem)}
+    }
+    </style>''')
+    if st.button('', icon=':material/translate:', key='language_toggle', type='tertiary',
+                 help='English / 中文'):
+        st.session_state.ui_language = 'zh' if st.session_state.ui_language == 'en' else 'en'
         st.query_params['lang'] = st.session_state.ui_language
-    st.sidebar.selectbox('Language / 语言', ['en', 'zh'],
-                         format_func=lambda value: 'English' if value == 'en' else '简体中文',
-                         key='ui_language', on_change=remember)
+        # Resend canonical selections when radio display strings are translated.
+        for key in ('analysis_source', 'analysis_loss_level'):
+            if key in st.session_state:
+                st.session_state[key] = st.session_state[key]

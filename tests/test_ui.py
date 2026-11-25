@@ -46,7 +46,7 @@ class TrainerUITests(unittest.TestCase):
                     if not continuation:
                         self.assertIn('No continuation', app.success[0].value)
                     self.assertEqual(puzzle['review']['correct'], 1)
-                    app.selectbox(key='ui_language').set_value('zh').run()
+                    app.button(key='language_toggle').click().run()
                     self.assertFalse(app.exception)
                     self.assertIn('另一种着法', app.success[0].value)
                     self.assertIn('d4', app.success[0].value)
@@ -149,7 +149,7 @@ class TrainerUITests(unittest.TestCase):
             self.assertIsNone(component.call_args.kwargs['response'])
             self.assertEqual([p['review'] for p in library['puzzles']], saved_reviews)
             save.assert_not_called()
-            app.selectbox(key='ui_language').set_value('zh').run()
+            app.button(key='language_toggle').click().run()
             self.assertEqual(app.session_state['review_cycle']['ids'], cycle['ids'])
             for _ in original_order:
                 app.button(key='next_puzzle').click().run()

@@ -45,10 +45,10 @@ class ReviewLossTests(unittest.TestCase):
             with patch('random.shuffle', side_effect=lambda ids: ids.reverse()):
                 app.button(key='restart_cycle').click().run()
             self.assertEqual(app.session_state['review_cycle']['ids'], ['large', 'boundary'])
-            app.selectbox(key='ui_language').set_value('zh').run()
+            app.button(key='language_toggle').click().run()
             self.assertEqual(app.number_input(key='analysis_threshold').value, 300)
             self.assertEqual(app.session_state['review_setup']['threshold'], 300)
-            app.selectbox(key='ui_language').set_value('en').run()
+            app.button(key='language_toggle').click().run()
             choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=1000)
             self.assertTrue(any('No puzzles match' in item.value for item in app.info))
             self.assertFalse(any(b.key == 'next_puzzle' for b in app.button))

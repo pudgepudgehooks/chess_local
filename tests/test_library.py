@@ -81,7 +81,7 @@ class LibraryUITests(unittest.TestCase):
             self.assertEqual(self.open_ids(app), [f'open-puzzle-p{i}' for i in range(0, 16, 2)])
             app.session_state.main_tab_name = 'Mistake library'
             app.run()
-            app.selectbox(key='ui_language').set_value('zh').run()
+            app.button(key='language_toggle').click().run()
             self.assertEqual(app.session_state['main_tab'], '错题库')
             self.assertEqual(app.button(key='open-puzzle-p4').label, '练习此题')
             app.button(key='open-puzzle-p4').click().run()

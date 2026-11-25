@@ -36,7 +36,7 @@ SECTIONS = [
         'If you answer incorrectly and then retry correctly, the correct answer replaces the 10-minute schedule with a 1-day review. A due time is not a reminder: there is no automatic pop-up, and missed puzzles are not added back into the current cycle. Start a new due-only cycle to pick up puzzles that have become due.',
     ]),
     ('Switch languages', [
-        'Use Language / 语言 in the sidebar to switch between English and Simplified Chinese. Your selected filters and current review cycle stay in place. Chess move notation and player usernames stay unchanged.',
+        'Click the language icon in the upper-right corner to switch between English and Simplified Chinese. Your selected filters and current review cycle stay in place. Chess move notation and player usernames stay unchanged.',
     ]),
 ]
 
