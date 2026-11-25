@@ -83,10 +83,8 @@ function render({animate=true, drop=null}={}) {
     }
   }
   highlights();
-  status.textContent = t(session.status, args.response?.message_values || {});
-  if (session.solved && session.index >= 0 && session.index < session.frames.length - 1) {
-    status.textContent += ' '+t('Step {step}/{total}: {move}', {step:session.index+1, total:session.frames.length, move:session.frames[session.index].san});
-  }
+  status.textContent = session.status === 'Correct! Use Forward and Back to review the continuation.' ? '' : t(session.status, args.response?.message_values || {});
+  status.hidden = !status.textContent;
   navigation.hidden = !session.solved;
   retry.hidden = !session.retryRequired;
   retry.setAttribute('aria-label', t('Try again'));
@@ -94,8 +92,10 @@ function render({animate=true, drop=null}={}) {
   hint.querySelector('span').textContent = t('Hint');
   hint.setAttribute('aria-label', t('Hint'));
   hint.disabled = session.busy || session.solved || session.retryRequired;
-  back.disabled = session.index < 0; back.textContent = '← '+t('Back');
-  forward.disabled = session.index >= session.frames.length - 1; forward.textContent = t('Forward')+' →';
+  back.disabled = session.index < 0;
+  forward.disabled = session.index >= session.frames.length - 1;
+  back.setAttribute('aria-label', t('Back')); back.title = t('Back');
+  forward.setAttribute('aria-label', t('Forward')); forward.title = t('Forward');
   height();
   return Promise.all(animations);
 }

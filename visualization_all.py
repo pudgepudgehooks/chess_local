@@ -79,7 +79,7 @@ def job_status(repository):
         st.progress(fraction, text=label)
         st.write(job_message(job['message']))
 
-TAB_NAMES = ['Practice', 'Mistake library', 'How it works']
+TAB_NAMES = ['Practice', 'Mistake library']
 
 
 def remember_main_tab():
@@ -91,18 +91,33 @@ def main(repository=None, playback_engine=None):
     if repository is None:
         language_selector()
         st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
-    st.title(tr('Chess Mistake Trainer'))
+    guide_page = st.query_params.get('page') == 'help'
+    st.html('''<style>
+    .st-key-help_page{position:fixed;top:3.75rem;right:3.5rem;width:2.5rem;z-index:1000002}
+    .st-key-help_page button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
+    @supports(position-anchor:--chess-toolbar-actions){
+      .st-key-help_page{position-anchor:--chess-toolbar-actions;top:calc(anchor(center,1.625rem) - 1.25rem);left:calc(anchor(left) + 3rem);right:auto}
+    }
+    </style>''')
+    if st.button('', icon=':material/help_outline:', key='help_page', type='tertiary', help=tr('How it works')):
+        st.query_params['page'] = 'help'
+        guide_page = True
+    st.title(tr('How it works' if guide_page else 'Chess Mistake Trainer'))
+    if guide_page:
+        if st.button(tr('Back to puzzles'), icon=':material/arrow_back:', key='back_to_puzzles'):
+            st.query_params.pop('page', None)
+            st.rerun()
+        trainer(repository, playback_engine, None, None, guide_page=True)
+        return
     name = st.session_state.pop('next_main_tab', st.session_state.get('main_tab_name', 'Practice'))
     st.session_state.main_tab_name = name
     st.session_state.main_tab = tr(name)
-    review_tab, library_tab, guide_tab = st.tabs(
+    review_tab, library_tab = st.tabs(
         [tr(name) for name in TAB_NAMES], key='main_tab', on_change=remember_main_tab)
-    with guide_tab:
-        show_guide(online=repository is not None)
     trainer(repository, playback_engine, review_tab, library_tab)
 
 
-def trainer(repository, playback_engine, review_tab, library_tab):
+def trainer(repository, playback_engine, review_tab, library_tab, guide_page=False):
     try:
         library = repository.load() if repository else load_library()
     except Exception as exc:
@@ -118,6 +133,9 @@ def trainer(repository, playback_engine, review_tab, library_tab):
     if repository:
         with st.sidebar:
             job_status(repository)
+    if guide_page:
+        show_guide(online=repository is not None, show_title=False)
+        return
     if st.session_state.get('review_start_error'):
         st.error(job_message(st.session_state.review_start_error))
     if st.session_state.get('pending_review_setup'):
@@ -266,7 +284,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         st.session_state.board_feedback = {'key': key, 'response': result}
         st.rerun()
     if response:
-        if response['status'] == 'correct':
+        if response['status'] == 'correct' and response['message'] != 'Correct! Use Forward and Back to review the continuation.':
             st.success(tr(response['message'], **response.get('message_values', {})))
         # Incorrect-answer feedback clears locally when Retry resets the board.
     with st.expander(tr('Reveal solution and original mistake')):
@@ -287,8 +305,6 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         url = puzzle.get('game_url', '')
         if url.startswith(('https://', 'http://')):
             st.link_button(tr('Open original game'), url)
-    review = puzzle.get('review', {})
-    st.caption(tr('Saved attempts: {attempts} · Correct: {correct}', attempts=review.get('attempts', 0), correct=review.get('correct', 0)))
     def next_puzzle():
         cycle['index'] = index + 1
         if cycle['index'] >= len(puzzles):

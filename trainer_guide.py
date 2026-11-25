@@ -41,8 +41,9 @@ SECTIONS = [
 ]
 
 
-def show_guide(online=False):
-    st.header(tr('How it works'))
+def show_guide(online=False, show_title=True):
+    if show_title:
+        st.header(tr('How it works'))
     st.write(tr('Turn mistakes from your own games into puzzles, then practice them with saved review progress.'))
     for title, paragraphs in SECTIONS:
         st.subheader(tr(title))

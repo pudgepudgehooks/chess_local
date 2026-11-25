@@ -91,8 +91,8 @@ class TrainerUITests(unittest.TestCase):
              patch('drag_board.drag_board', return_value=event) as component:
             app = self.app(library).run(timeout=30)
             self.assertFalse(app.exception)
-            self.assertTrue(app.success)
-            self.assertNotIn('acceptable alternative', app.success[0].value)
+            self.assertFalse(any('Correct! Use Forward and Back to review the continuation.' in item.value for item in app.success))
+            self.assertFalse(any('Saved attempts:' in item.value for item in app.get('tab')[0].caption))
             self.assertEqual(save.call_count, 1)
             response = component.call_args.kwargs['response']
             self.assertEqual(response['status'], 'correct')
@@ -130,7 +130,7 @@ class TrainerUITests(unittest.TestCase):
             self.assertEqual(component.call_args.kwargs['response']['attempt_fen'], attempted.fen())
             component.return_value = {'fen': first['fen'], 'uci': first['best_move'], 'event_id': 'correct'}
             app.run()
-            self.assertTrue(app.success)
+            self.assertFalse(any('Correct! Use Forward and Back' in item.value for item in app.success))
             self.assertEqual(save.call_count, 2)
             self.assertEqual(app.session_state['active_id'], first['id'])
             app.button(key='next_puzzle').click().run()

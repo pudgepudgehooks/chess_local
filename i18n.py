@@ -229,6 +229,7 @@ ZH = {
     'That move loses more than the accepted alternatives. Try again.': '这步棋比可接受的候选着法失分更多，请再试一次。',
     'Could not save your review. Please try again.': '无法保存复习记录，请重试。',
     'Could not save review: {error}': '无法保存复习记录：{error}',
+    'Back to puzzles': '返回练习',
     'Hint': '提示', 'Look at the {piece} on {square}.': '请留意 {square} 格的{piece}。',
     'Reveal solution and original mistake': '查看答案与原来的错误着法',
     'Your game move: **{move}**': '你在实战中的着法：**{move}**',
@@ -315,7 +316,7 @@ def language_selector():
         requested = st.query_params.get('lang', 'en')
         st.session_state.ui_language = requested if requested in ('en', 'zh') else 'en'
     st.html('''<style>
-    [data-testid="stToolbarActions"]{anchor-name:--chess-toolbar-actions;padding-inline-start:3rem}
+    [data-testid="stToolbarActions"]{anchor-name:--chess-toolbar-actions;padding-inline-start:6rem}
     .st-key-language_toggle{position:fixed;top:3.75rem;right:0.75rem;width:2.5rem;z-index:1000002}
     .st-key-language_toggle button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
     @supports(position-anchor:--chess-toolbar-actions){
