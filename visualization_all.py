@@ -149,7 +149,6 @@ def trainer(repository, playback_engine, review_tab, library_tab):
     available = filter_library(library, setup)
     due_only = setup['due_only']
     with library_tab:
-        st.caption(summary)
         candidates = [p for p in available.values() if not due_only or is_due(p)]
         selected = show_library(candidates)
         if selected is not None:
