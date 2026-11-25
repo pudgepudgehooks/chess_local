@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 import shutil
 import time
-import re
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
@@ -15,6 +14,7 @@ import chess.engine
 import chess.pgn
 import requests
 from game_dates import validate_date_range, within_dates
+from player_names import normalize_player_username
 
 
 def engine_path(value=None):
@@ -25,7 +25,8 @@ def engine_path(value=None):
 
 
 def fetch_chesscom_pgn(username, year, month):
-    if not username.strip() or not 1 <= month <= 12:
+    username = normalize_player_username(username)
+    if not 1 <= month <= 12:
         raise ValueError('Enter a username and valid month.')
     response = requests.get(
         f'https://api.chess.com/pub/player/{username.strip()}/games/{year}/{month:02d}',
@@ -76,8 +77,7 @@ def fetch_chesscom_range(username, start, end, max_games=None):
 
 def fetch_lichess_pgn(username, year, month, max_games=20):
     """Fetch bounded, completed standard games in a UTC calendar month."""
-    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username.strip()):
-        raise ValueError('Enter a valid player username (letters, numbers, underscores or hyphens).')
+    username = normalize_player_username(username)
     if not 2013 <= year <= 2200 or not 1 <= month <= 12 or not 1 <= max_games <= 100:
         raise ValueError('Choose a valid Lichess month (2013 or later) and 1–100 games.')
     start = datetime(year, month, 1, tzinfo=timezone.utc)
@@ -95,8 +95,7 @@ def fetch_lichess_range(username, start, end, max_games=20):
 
 
 def _fetch_lichess_window(username, start, end, max_games):
-    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username.strip()):
-        raise ValueError('Enter a valid player username (letters, numbers, underscores or hyphens).')
+    username = normalize_player_username(username)
     if not 1 <= max_games <= 100:
         raise ValueError('Choose a valid Lichess month (2013 or later) and 1–100 games.')
     params = {

@@ -2,7 +2,6 @@
 from copy import deepcopy
 from datetime import date
 import os
-import re
 
 import chess.engine
 import streamlit as st
@@ -12,6 +11,14 @@ import puzzle_store
 from analysis_cache import LOCAL_POLICY, plan_analysis, coverage_records, merge_coverage
 from game_dates import validate_date_range, within_dates
 from i18n import tr, language, error_text
+from player_names import normalize_player_username
+
+
+def clean_username_input():
+    try:
+        st.session_state.analysis_username = normalize_player_username(st.session_state.analysis_username)
+    except ValueError:
+        pass  # Leave genuinely invalid input visible for correction.
 
 
 def reset_round():
@@ -31,9 +38,8 @@ def filter_library(library, setup):
 
 
 def prepare_start(library, setup, repository=None, uploaded=None, executable=None, progress_label=None):
-    username, start, end = setup['username'], setup['start'], setup['end']
-    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username):
-        raise ValueError('Enter a valid player username (letters, numbers, underscores or hyphens).')
+    username = normalize_player_username(setup['username'])
+    start, end = setup['start'], setup['end']
     validate_date_range(start, end, max_days=366)
     maximum = 100 if repository else setup['import_limit']
     if setup['source'] == 'Upload PGN':
@@ -91,7 +97,7 @@ def setup_sidebar(library, repository=None, progress_label=None):
         source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'],
             format_func=lambda value, lang=language(): tr({'Chess.com month': 'Chess.com', 'Lichess month': 'Lichess'}.get(value, value), _language=lang), key='analysis_source')
         username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
-            'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username',
+            'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username', on_change=clean_username_input,
             help=tr('This is the chess username whose mistakes you want to review, not your app login.'))
         start = st.date_input(tr('Start date'), value=date.today().replace(day=1), min_value=date(1900, 1, 1),
                              max_value=date(2200, 12, 31), format='YYYY-MM-DD', key='analysis_start_date')
@@ -126,6 +132,7 @@ def setup_sidebar(library, repository=None, progress_label=None):
             snapshot = dict(owner=owner, source=source, username=username.strip(), start=start, end=end,
                             threshold=int(threshold), depth=int(depth), due_only=due_only, import_limit=import_limit)
             try:
+                snapshot['username'] = normalize_player_username(username)
                 with st.spinner(tr('Preparing your review…')):
                     plan = prepare_start(library, snapshot, repository, uploaded, executable, progress_label)
                 if plan['job_id']:

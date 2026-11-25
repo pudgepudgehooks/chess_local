@@ -1,12 +1,12 @@
 """One bounded worker per app process; PostgreSQL coordinates durable jobs."""
 from itertools import islice
 import logging
-import re
 import threading
 import time
 
 import chess.engine
 from chess_analysis import analyze_game, read_games, count_player_moves
+from player_names import normalize_player_username
 
 LOG = logging.getLogger(__name__)
 MAX_BYTES = 1024 * 1024
@@ -14,8 +14,7 @@ MAX_GAMES = 5
 
 
 def validate_payload(username, texts, depth, threshold, max_games=MAX_GAMES):
-    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', username.strip()):
-        raise ValueError('Enter a valid player username (letters, numbers, underscores or hyphens).')
+    username = normalize_player_username(username)
     if not 1 <= int(depth) <= 12 or not 0 <= int(threshold) <= 2000:
         raise ValueError('Analysis settings exceed beta limits.')
     if sum(len(text.encode('utf-8')) for text in texts) > MAX_BYTES:
