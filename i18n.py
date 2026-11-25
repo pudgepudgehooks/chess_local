@@ -311,12 +311,11 @@ def language_selector():
         requested = st.query_params.get('lang', 'en')
         st.session_state.ui_language = requested if requested in ('en', 'zh') else 'en'
     st.html('''<style>
-    [data-testid="stToolbarActions"]{anchor-name:--chess-toolbar-actions}
-    .st-key-language_toggle{position:fixed;top:0.375rem;right:18rem;width:2.5rem;z-index:1000002}
+    [data-testid="stToolbarActions"]{anchor-name:--chess-toolbar-actions;padding-inline-start:3rem}
+    .st-key-language_toggle{position:fixed;top:3.75rem;right:0.75rem;width:2.5rem;z-index:1000002}
     .st-key-language_toggle button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
-    @media(max-width:768px){.st-key-language_toggle{right:5rem}}
     @supports(position-anchor:--chess-toolbar-actions){
-      .st-key-language_toggle{position-anchor:--chess-toolbar-actions;top:calc(anchor(center, 1.625rem) - 1.25rem);right:calc(anchor(left, 5rem) + 0.5rem)}
+      .st-key-language_toggle{position-anchor:--chess-toolbar-actions;top:calc(anchor(center, 1.625rem) - 1.25rem);left:calc(anchor(left) + 0.25rem);right:auto}
     }
     </style>''')
     if st.button('', icon=':material/translate:', key='language_toggle', type='tertiary',
