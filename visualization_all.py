@@ -226,8 +226,14 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
     key = f"{repository.owner}-{puzzle['id']}" if repository else puzzle['id']
     previous = st.session_state.get('board_feedback', {})
     response = previous.get('response') if previous.get('key') == key else None
-    event = drag_board(board, key=f"board-{cycle['token']}", response=response,
-                       context_id=key, hint_square=puzzle['best_move'][:2])
+    st.html('''<style>
+    .st-key-practice_board,.st-key-practice_solution{width:100%;max-width:460px}
+    .st-key-practice_board iframe{display:block}
+    [data-testid="stVerticalBlock"]:has(> [data-testid="stLayoutWrapper"] > .st-key-practice_board){gap:0.35rem}
+    </style>''')
+    with st.container(key='practice_board'):
+        event = drag_board(board, key=f"board-{cycle['token']}", response=response,
+                           context_id=key, hint_square=puzzle['best_move'][:2])
     seen = st.session_state.setdefault('board_events', [])
     new_event = (isinstance(event, dict) and event.get('fen') == board.fen()
                  and event.get('context_id', key) == key
@@ -287,7 +293,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         if response['status'] == 'correct' and response['message'] != 'Correct! Use Forward and Back to review the continuation.':
             st.success(tr(response['message'], **response.get('message_values', {})))
         # Incorrect-answer feedback clears locally when Retry resets the board.
-    with st.expander(tr('Reveal solution and original mistake')):
+    with st.container(key='practice_solution'), st.expander(tr('Reveal solution and original mistake')):
         st.write(tr('Your game move: **{move}**', move=board.san(chess.Move.from_uci(puzzle['played']))))
         line_board = board.copy()
         line = []

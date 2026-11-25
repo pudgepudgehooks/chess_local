@@ -8,7 +8,7 @@ let args = null, session = null, selected = null, drag = null, suppressClick = f
 let renderedFen = null, renderedWhite = null;
 const send = (type, data={}) => window.parent.postMessage({isStreamlitMessage:true, type, ...data}, '*');
 const t = (message, values={}) => (args?.labels?.[message] || message).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? `{${key}}`);
-function height() { send('streamlit:setFrameHeight', {height:document.getElementById('wrap').scrollHeight + 8}); }
+function height() { send('streamlit:setFrameHeight', {height:document.getElementById('wrap').scrollHeight + 2}); }
 function highlights() {
   for (const square of board.children) {
     square.classList.toggle('selected', square.dataset.square === selected);
@@ -83,7 +83,9 @@ function render({animate=true, drop=null}={}) {
     }
   }
   highlights();
-  status.textContent = session.status === 'Correct! Use Forward and Back to review the continuation.' ? '' : t(session.status, args.response?.message_values || {});
+  const quietStatus = ['Correct! Use Forward and Back to review the continuation.',
+    'Click Next Puzzle to proceed.', 'The answer is incorrect, please try again'];
+  status.textContent = quietStatus.includes(session.status) ? '' : t(session.status, args.response?.message_values || {});
   status.hidden = !status.textContent;
   navigation.hidden = !session.solved;
   retry.hidden = !session.retryRequired;

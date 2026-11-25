@@ -38,6 +38,7 @@ class ReviewSetupUITests(unittest.TestCase):
              patch('drag_board.drag_board', return_value=None):
             app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run()
             self.assertEqual(app.radio(key='analysis_loss_level').value, 'Low')
+            self.assertFalse(app.checkbox(key='due_only').value, 'due-only starts unchecked')
             self.assertTrue(app.number_input(key='analysis_threshold').disabled)
             app.text_input(key='analysis_username').set_value('Me')
             app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1))

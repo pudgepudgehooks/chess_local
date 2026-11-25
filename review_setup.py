@@ -117,12 +117,12 @@ def setup_sidebar(library, repository=None, progress_label=None):
             format_func=lambda value, lang=language(): tr(value, _language=lang),
             disabled=bool(st.session_state.get('analysis_use_custom_loss', False)),
             help=tr('A custom minimum loss in Advanced settings overrides this choice.'))
-        due_only = st.checkbox(tr('Only show puzzles due for review'), value=True, key='due_only')
         uploaded = st.file_uploader(tr('PGN file'), type=['pgn'], key='analysis_upload') if source == 'Upload PGN' else None
         if source == 'Upload PGN' and uploaded is None:
             st.caption(tr('Upload the PGN to find new mistakes. Without a file, only matching saved puzzles can be reviewed.'))
         executable = ''
         with st.expander(tr('Advanced settings')):
+            due_only = st.checkbox(tr('Only show puzzles due for review'), value=False, key='due_only')
             use_custom_loss = st.checkbox(tr('Use custom minimum loss'), value=False, key='analysis_use_custom_loss',
                 help=tr('When enabled, Low and High are ignored.'))
             custom_loss = st.number_input(tr('Minimum loss (centipawns)'), 0, 2000, 150, 50, key='analysis_threshold',

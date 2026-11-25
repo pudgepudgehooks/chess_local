@@ -9,7 +9,7 @@ SECTIONS = [
         'Click Review this puzzle to open that position in Practice with a fresh board. The selected puzzle starts a new cycle, followed by the other matching puzzles. Browsing previews does not count as an attempt or change saved progress. Turn off due-only to choose puzzles scheduled for later.',
     ]),
     ('Start a review', [
-        'After signing in, choose Chess.com, Lichess, or Upload PGN in the left sidebar. Enter the chess username, start and end dates, choose Low or High for Mistake size, and set your due-only preference, then click Start reviewing. The dates include both endpoints and can cover up to 366 days.',
+        'After signing in, choose Chess.com, Lichess, or Upload PGN in the left sidebar. Enter the chess username, start and end dates, choose Low or High for Mistake size, then click Start reviewing. The optional due-only filter is under Advanced settings. The dates include both endpoints and can cover up to 366 days.',
         'Low uses a minimum loss of 150 centipawns; High uses 300. To choose another value, open Advanced settings and enable Use custom minimum loss. That value overrides Low and High for both analysis and review. Turn it off to use Low or High again. 100 centipawns equals one pawn; a custom value of 0 includes saved mate-related mistakes without a numeric loss.',
         'Start reviewing checks completed analysis for each fetched game. It reuses a game when an earlier search used the same or a lower loss threshold and the same or a higher depth. New or changed games, lower thresholds, and higher depths require analysis. Games with no mistakes are tracked too.',
     ]),
@@ -17,7 +17,7 @@ SECTIONS = [
         'The chess username is separate from your app login. Your review shows that player within the selected dates and game source. Uploaded PGNs may contain games from either platform. Undated puzzles stay saved but are not selected by a date range.',
         'Sidebar edits are drafts until Start reviewing is clicked. Changing a date or loss value does not interrupt the active puzzle. The main area shows your applied selection; Practice, Mistake library, and shuffled restarts all use it.',
         'If the same games were analyzed at 100, starting at 200 filters their saved mistakes without rerunning Stockfish. Starting at 50 needs analysis to find previously unsaved smaller mistakes. Older libraries may need one analysis before their coverage is known; existing puzzles and review history are kept.',
-        'Only show puzzles due for review hides puzzles scheduled for later. To revisit them now, turn it off and click Start reviewing. Browsing saved positions or stepping through a continuation does not add attempts.',
+        'Only show puzzles due for review is in Advanced settings and is off by default. Enabling it hides puzzles scheduled for later. To revisit them now, turn it off and click Start reviewing. Browsing saved positions or stepping through a continuation does not add attempts.',
     ]),
     ('Answer a puzzle on the board', [
         'Drag a piece to its destination. For promotion, choose the new piece. Your piece stays on its destination while the answer is checked. The app accepts the saved best move and accepted alternatives.',
