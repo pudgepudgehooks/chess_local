@@ -22,6 +22,7 @@ def enter_settings(app, threshold):
     app.text_input(key='analysis_username').set_value('Me')
     app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1))
     app.date_input(key='analysis_end_date').set_value(date(2026, 8, 31))
+    app.checkbox(key='analysis_use_custom_loss').check().run()
     app.number_input(key='analysis_threshold').set_value(threshold)
     app.checkbox(key='due_only').uncheck()
     app.run()
@@ -29,6 +30,46 @@ def enter_settings(app, threshold):
 
 
 class ReviewSetupUITests(unittest.TestCase):
+    def test_presets_and_advanced_override_apply_to_the_review(self):
+        from streamlit.testing.v1 import AppTest
+        library = {'puzzles': [dict(mistake(), id=f'loss-{loss}', loss=loss) for loss in (150, 250, 350)]}
+        with patch('visualization_all.load_library', return_value=library), \
+             patch('chess_analysis.fetch_chesscom_range', return_value=[]) as fetch, \
+             patch('drag_board.drag_board', return_value=None):
+            app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run()
+            self.assertEqual(app.radio(key='analysis_loss_level').value, 'Low')
+            self.assertTrue(app.number_input(key='analysis_threshold').disabled)
+            app.text_input(key='analysis_username').set_value('Me')
+            app.date_input(key='analysis_start_date').set_value(date(2026, 8, 1))
+            app.date_input(key='analysis_end_date').set_value(date(2026, 8, 31))
+            app.button(key='start_review').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['review_setup']['threshold'], 150)
+            self.assertEqual(len(app.session_state['review_cycle']['ids']), 3)
+            app.radio(key='analysis_loss_level').set_value('High').run()
+            self.assertEqual(app.session_state['review_setup']['threshold'], 150, 'preset edits are drafts')
+            app.button(key='start_review').click().run()
+            self.assertEqual(app.session_state['review_setup']['threshold'], 300)
+            self.assertEqual(app.session_state['review_cycle']['ids'], ['loss-350'])
+            app.checkbox(key='analysis_use_custom_loss').check().run()
+            self.assertTrue(app.radio(key='analysis_loss_level').disabled)
+            self.assertFalse(app.number_input(key='analysis_threshold').disabled)
+            app.number_input(key='analysis_threshold').set_value(200).run()
+            app.button(key='start_review').click().run()
+            self.assertEqual(app.session_state['review_setup']['threshold'], 200, 'custom overrides High')
+            self.assertEqual(app.session_state['review_cycle']['ids'], ['loss-250', 'loss-350'])
+            app.selectbox(key='ui_language').set_value('zh').run()
+            self.assertEqual(app.checkbox(key='analysis_use_custom_loss').label, '使用自定义最低失分')
+            self.assertEqual(app.radio(key='analysis_loss_level').value, 'High')
+            self.assertEqual(app.number_input(key='analysis_threshold').value, 200)
+            app.checkbox(key='analysis_use_custom_loss').uncheck().run()
+            app.button(key='start_review').click().run()
+            self.assertEqual(app.session_state['review_setup']['threshold'], 300, 'turning override off restores High')
+            app.radio(key='analysis_loss_level').set_value('Low').run()
+            app.button(key='start_review').click().run()
+            self.assertEqual(app.session_state['review_setup']['threshold'], 150)
+            self.assertFalse(app.exception)
+
     def test_single_sidebar_start_and_cached_higher_threshold(self):
         from streamlit.testing.v1 import AppTest
         library = dict(version=1, puzzles=[])

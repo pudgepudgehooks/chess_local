@@ -28,6 +28,7 @@ def choose_review(app, username, start, end, threshold=0, due_only=False, source
     app.text_input(key='analysis_username').set_value(username)
     app.date_input(key='analysis_start_date').set_value(start)
     app.date_input(key='analysis_end_date').set_value(end)
+    app.checkbox(key='analysis_use_custom_loss').check().run()
     app.number_input(key='analysis_threshold').set_value(threshold)
     app.checkbox(key='due_only').set_value(due_only)
     app.run()

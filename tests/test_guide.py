@@ -18,6 +18,7 @@ class GuideUITests(unittest.TestCase):
             app = seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library).run(timeout=30)
             self.assertFalse(app.exception)
             self.assertEqual([tab.proto.label for tab in app.get('tab')], ['Practice', 'Mistake library', 'How it works'])
+            app.checkbox(key='analysis_use_custom_loss').check().run()
             app.number_input(key='analysis_threshold').set_value(300).run()
             app.button(key='next_puzzle').click().run()
             active = app.session_state['active_id']
@@ -41,4 +42,5 @@ class GuideUITests(unittest.TestCase):
         self.assertIn('five uncovered games per start', text)
         self.assertIn('30 centipawns (0.3 pawns)', text)
         self.assertIn('same review schedule', text)
+        self.assertIn('Low uses a minimum loss of 150 centipawns; High uses 300', text)
         self.assertNotIn('Stockfish executable path', text)

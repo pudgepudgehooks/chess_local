@@ -9,8 +9,8 @@ SECTIONS = [
         'Click Review this puzzle to open that position in Practice with a fresh board. The selected puzzle starts a new cycle, followed by the other matching puzzles. Browsing previews does not count as an attempt or change saved progress. Turn off due-only to choose puzzles scheduled for later.',
     ]),
     ('Start a review', [
-        'After signing in, choose Chess.com, Lichess, or Upload PGN in the left sidebar. Enter the chess username, start and end dates, minimum loss, and due-only preference, then click Start reviewing. The dates include both endpoints and can cover up to 366 days.',
-        'One Minimum loss setting controls both new analysis and the saved puzzles shown in this review. 100 centipawns equals one pawn. Set 0 to include saved mate-related mistakes without a numeric loss. Analysis depth is under Advanced settings.',
+        'After signing in, choose Chess.com, Lichess, or Upload PGN in the left sidebar. Enter the chess username, start and end dates, choose Low or High for Mistake size, and set your due-only preference, then click Start reviewing. The dates include both endpoints and can cover up to 366 days.',
+        'Low uses a minimum loss of 150 centipawns; High uses 300. To choose another value, open Advanced settings and enable Use custom minimum loss. That value overrides Low and High for both analysis and review. Turn it off to use Low or High again. 100 centipawns equals one pawn; a custom value of 0 includes saved mate-related mistakes without a numeric loss.',
         'Start reviewing checks completed analysis for each fetched game. It reuses a game when an earlier search used the same or a lower loss threshold and the same or a higher depth. New or changed games, lower thresholds, and higher depths require analysis. Games with no mistakes are tracked too.',
     ]),
     ('Apply sidebar settings', [

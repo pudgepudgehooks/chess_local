@@ -3,6 +3,13 @@ import re
 import streamlit as st
 
 ZH = {
+    'Mistake size': '失误程度',
+    'Low': '低',
+    'High': '高',
+    'Use custom minimum loss': '使用自定义最低失分',
+    'When enabled, Low and High are ignored.': '启用后，将忽略“低”和“高”的选择。',
+    'A custom minimum loss in Advanced settings overrides this choice.': '高级设置中的自定义最低失分会覆盖此选择。',
+    'When enabled, this value controls analysis and review. 100 centipawns is one pawn; 0 includes saved mate-related mistakes without a numeric loss.': '启用后，此数值同时用于分析和复习。100 厘兵相当于一个兵，0 可包含已保存且没有数值失分的将杀相关错题。',
     'Your browser blocked the sign-in cookie. Allow cookies for this app to stay signed in after refreshing.': '浏览器阻止了登录 Cookie。请允许此应用使用 Cookie，以便刷新后保持登录。',
     'Previous': '上一页',
     'Next': '下一页',
@@ -18,8 +25,8 @@ ZH = {
     'Upload the PGN to find new mistakes. Without a file, only matching saved puzzles can be reviewed.': '上传 PGN 才能查找新的失误。没有文件时，只能复习符合条件的已保存题目。',
     'Start a review': '开始一轮复习',
     'Apply sidebar settings': '应用侧栏设置',
-    'After signing in, choose Chess.com, Lichess, or Upload PGN in the left sidebar. Enter the chess username, start and end dates, minimum loss, and due-only preference, then click Start reviewing. The dates include both endpoints and can cover up to 366 days.': '登录后，在左侧栏选择 Chess.com、Lichess 或上传 PGN。输入棋谱用户名、开始和结束日期、最低失分以及是否只复习到期题目，再点击“开始复习”。日期范围包含两端日期，最多 366 天。',
-    'One Minimum loss setting controls both new analysis and the saved puzzles shown in this review. 100 centipawns equals one pawn. Set 0 to include saved mate-related mistakes without a numeric loss. Analysis depth is under Advanced settings.': '同一个最低失分设置同时用于新分析和本轮显示的已保存题目。100 厘兵相当于一个兵。设为 0 可包含已保存且没有数值失分的将杀相关错题。分析深度在高级设置中。',
+    'After signing in, choose Chess.com, Lichess, or Upload PGN in the left sidebar. Enter the chess username, start and end dates, choose Low or High for Mistake size, and set your due-only preference, then click Start reviewing. The dates include both endpoints and can cover up to 366 days.': '登录后，在左侧栏选择 Chess.com、Lichess 或上传 PGN。输入棋谱用户名、开始和结束日期，为“失误程度”选择“低”或“高”，并设置是否只复习到期题目，再点击“开始复习”。日期范围包含两端日期，最多 366 天。',
+    'Low uses a minimum loss of 150 centipawns; High uses 300. To choose another value, open Advanced settings and enable Use custom minimum loss. That value overrides Low and High for both analysis and review. Turn it off to use Low or High again. 100 centipawns equals one pawn; a custom value of 0 includes saved mate-related mistakes without a numeric loss.': '“低”使用 150 厘兵作为最低失分，“高”使用 300。要使用其他数值，请打开高级设置并启用“使用自定义最低失分”。该数值会覆盖“低”和“高”，同时用于分析和复习。关闭自定义选项后，将再次使用“低”或“高”。100 厘兵相当于一个兵；自定义为 0 可包含已保存且没有数值失分的将杀相关错题。',
     'Start reviewing checks completed analysis for each fetched game. It reuses a game when an earlier search used the same or a lower loss threshold and the same or a higher depth. New or changed games, lower thresholds, and higher depths require analysis. Games with no mistakes are tracked too.': '“开始复习”会检查每局已获取对局的分析记录。如果以前的最低失分不高于本次，且分析深度不低于本次，就会复用。新对局、内容有变化的对局、更低的失分门槛或更高的深度需要分析。没有发现失误的对局也会记录为已分析。',
     'The chess username is separate from your app login. Your review shows that player within the selected dates and game source. Uploaded PGNs may contain games from either platform. Undated puzzles stay saved but are not selected by a date range.': '棋谱用户名与应用登录账号不同。本轮复习显示所选来源和日期范围内该棋手的题目。上传的 PGN 可来自任一平台。日期未知的题目仍会保存，但不会进入指定日期范围。',
     'Sidebar edits are drafts until Start reviewing is clicked. Changing a date or loss value does not interrupt the active puzzle. The main area shows your applied selection; Practice, Mistake library, and shuffled restarts all use it.': '点击“开始复习”之前，侧栏修改只是草稿。修改日期或失分数值不会打断当前题目。主区域会显示已应用的选择，练习、错题库和打乱顺序后的新一轮都会使用该选择。',

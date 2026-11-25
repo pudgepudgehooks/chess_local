@@ -110,20 +110,28 @@ def setup_sidebar(library, repository=None, progress_label=None):
         except ValueError as exc:
             valid = False
             st.error(error_text(exc))
-        threshold = st.number_input(tr('Minimum loss (centipawns)'), 0, 2000, 150, 50, key='analysis_threshold',
-            help=tr('Used for both analysis and this review. 100 centipawns is one pawn; 0 includes saved mate-related mistakes without a numeric loss.'))
+        level = st.radio(tr('Mistake size'), ['Low', 'High'], horizontal=True, key='analysis_loss_level',
+            format_func=lambda value, lang=language(): tr(value, _language=lang),
+            disabled=bool(st.session_state.get('analysis_use_custom_loss', False)),
+            help=tr('A custom minimum loss in Advanced settings overrides this choice.'))
         due_only = st.checkbox(tr('Only show puzzles due for review'), value=True, key='due_only')
         uploaded = st.file_uploader(tr('PGN file'), type=['pgn'], key='analysis_upload') if source == 'Upload PGN' else None
         if source == 'Upload PGN' and uploaded is None:
             st.caption(tr('Upload the PGN to find new mistakes. Without a file, only matching saved puzzles can be reviewed.'))
         executable = ''
         with st.expander(tr('Advanced settings')):
+            use_custom_loss = st.checkbox(tr('Use custom minimum loss'), value=False, key='analysis_use_custom_loss',
+                help=tr('When enabled, Low and High are ignored.'))
+            custom_loss = st.number_input(tr('Minimum loss (centipawns)'), 0, 2000, 150, 50, key='analysis_threshold',
+                disabled=not use_custom_loss,
+                help=tr('When enabled, this value controls analysis and review. 100 centipawns is one pawn; 0 includes saved mate-related mistakes without a numeric loss.'))
             depth = st.number_input(tr('Analysis depth'), 1, 12 if repository else 30, 10 if repository else 15, key='analysis_depth')
             if repository:
                 import_limit = 100
             else:
                 executable = st.text_input(tr('Stockfish executable path'), value=os.environ.get('STOCKFISH_PATH', ''), key='analysis_engine')
                 import_limit = st.number_input(tr('Maximum games to fetch'), 1, 100, 100, key='analysis_import_limit')
+        threshold = custom_loss if use_custom_loss else {'Low': 150, 'High': 300}[level]
         if repository:
             st.caption(tr('Fetches up to 100 recent games. Each start analyzes at most five uncovered games; no daily analysis quota. Cached games do not need Stockfish again.'))
         pending = st.session_state.get('pending_review_setup')
