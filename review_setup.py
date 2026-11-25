@@ -91,8 +91,8 @@ def setup_sidebar(library, repository=None, progress_label=None):
         source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'],
             format_func=lambda value, lang=language(): tr({'Chess.com month': 'Chess.com', 'Lichess month': 'Lichess'}.get(value, value), _language=lang), key='analysis_source')
         username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
-            'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username')
-        st.caption(tr('This is the chess username whose mistakes you want to review, not your app login.'))
+            'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username',
+            help=tr('This is the chess username whose mistakes you want to review, not your app login.'))
         start = st.date_input(tr('Start date'), value=date.today().replace(day=1), min_value=date(1900, 1, 1),
                              max_value=date(2200, 12, 31), format='YYYY-MM-DD', key='analysis_start_date')
         end = st.date_input(tr('End date'), value=date.today(), min_value=date(1900, 1, 1),
