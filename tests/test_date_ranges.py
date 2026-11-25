@@ -82,7 +82,7 @@ class DateRangeUITests(unittest.TestCase):
              patch('visualization_all.drag_board', return_value=None):
             app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run(timeout=30)
             choose_review(app, 'Me', date(2026, 8, 30), date(2026, 9, 1))
-            self.assertEqual(app.session_state['review_cycle']['ids'], ['d1', 'd2'])
+            self.assertEqual(set(app.session_state['review_cycle']['ids']), {'d1', 'd2'})
             self.assertEqual([b.key for b in app.button if b.key and b.key.startswith('open-puzzle-')], ['open-puzzle-d1', 'open-puzzle-d2'])
             for _ in range(2):
                 app.button(key='next_puzzle').click().run()

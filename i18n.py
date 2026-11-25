@@ -3,6 +3,7 @@ import re
 import streamlit as st
 
 ZH = {
+    'Back to sign in': '返回登录',
     'Account': '账号',
     'Previous puzzle': '上一题',
     'Try again': '再试一次',
@@ -38,7 +39,7 @@ ZH = {
     'Sidebar edits are drafts until Start reviewing is clicked. Changing a date or loss value does not interrupt the active puzzle. The main area shows your applied selection; Practice, Mistake library, and shuffled restarts all use it.': '点击“开始复习”之前，侧栏修改只是草稿。修改日期或失分数值不会打断当前题目。主区域会显示已应用的选择，练习、错题库和打乱顺序后的新一轮都会使用该选择。',
     'If the same games were analyzed at 100, starting at 200 filters their saved mistakes without rerunning Stockfish. Starting at 50 needs analysis to find previously unsaved smaller mistakes. Older libraries may need one analysis before their coverage is known; existing puzzles and review history are kept.': '如果同一批对局已经按 100 厘兵分析，改为 200 只会筛选已保存的错题，无需再次运行 Stockfish。改为 50 则需要分析，以查找之前未保存的较小失误。旧题库可能需要先分析一次才能确认覆盖情况，但已有题目和复习记录会保留。',
     'Only show puzzles due for review is in Advanced settings and is off by default. Enabling it hides puzzles scheduled for later. To revisit them now, turn it off and click Start reviewing. Browsing saved positions or stepping through a continuation does not add attempts.': '“只显示到期复习的题目”位于高级设置中，默认关闭。开启后会隐藏尚未到期的题目。要立即重做，请关闭该选项并点击“开始复习”。浏览局面或逐步查看后续着法不会增加作答次数。',
-    'A cycle visits each puzzle in your applied selection once. After the last puzzle, click Next puzzle to take a rest or repeat the round in shuffled order. To review other dates or settings, edit the sidebar and click Start reviewing.': '每轮会依次练习已应用选择中的每道题。最后一题后点击“下一题”，可休息或打乱顺序重做本轮。要改用其他日期或设置，请修改侧栏并点击“开始复习”。',
+    'Each new review starts in a shuffled order and visits each puzzle in your applied selection once. After the last puzzle, click Next puzzle to take a rest or repeat the round in shuffled order. To review other dates or settings, edit the sidebar and click Start reviewing.': '每次开始新的复习都会打乱题目顺序，本轮会练习已应用选择中的每道题一次。最后一题后点击“下一题”，可休息或打乱顺序重做本轮。要改用其他日期或设置，请修改侧栏并点击“开始复习”。',
     'The beta fetches up to 100 recent games and analyzes at most five uncovered games per start, with no daily analysis quota. Already covered games are skipped. If fetched games remain, click Start reviewing again for the next batch. A wide range does not guarantee every game has been fetched; narrow the dates to reach older games.': '内测版最多获取近期 100 局，每次开始最多分析 5 局尚未覆盖的对局，每天的分析请求次数不限。已经覆盖的对局会跳过。如果已获取的对局仍有未分析的，可再次点击“开始复习”处理下一批。较宽的日期范围不保证已获取全部对局；可缩小日期范围来获取较早的对局。',
     'If analysis is needed, the review opens automatically after it finishes and saves successfully. Fully covered games open without a new analysis job. Failed analysis is not marked reusable, and the previous applied selection remains available. Repeated analysis updates existing puzzles without adding copies or replacing review history.': '如果需要分析，完成并成功保存后会自动打开复习。已完全覆盖的对局无需新建分析任务。失败的分析不会被标记为可复用，之前已应用的选择仍可使用。重复分析会更新已有题目，不会添加副本或覆盖复习记录。',
     'For local analysis, set Stockfish executable path under Advanced settings. Fully covered games do not need Stockfish again. Maximum games to fetch limits each web import; local analysis runs while the app is open.': '本地分析请在高级设置中指定 Stockfish 可执行文件路径。已完全覆盖的对局无需再次运行 Stockfish。“最多获取局数”限制每次网络导入的数量；本地分析在应用运行时执行。',

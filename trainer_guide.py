@@ -3,6 +3,20 @@ import streamlit as st
 from i18n import tr
 
 
+def help_button():
+    """Shared header entry point on both the sign-in and trainer screens."""
+    st.html('''<style>
+    .st-key-help_page{position:fixed;top:3.75rem;right:3.5rem;width:2.5rem;z-index:1000002}
+    .st-key-help_page button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
+    @supports(position-anchor:--chess-toolbar-actions){
+      .st-key-help_page{position-anchor:--chess-toolbar-actions;top:calc(anchor(center,1.625rem) - 1.25rem);left:calc(anchor(left) + 3rem);right:auto}
+    }
+    </style>''')
+    if st.button('', icon=':material/help_outline:', key='help_page', type='tertiary', help=tr('How it works')):
+        st.query_params['page'] = 'help'
+    return st.query_params.get('page') == 'help'
+
+
 SECTIONS = [
     ('Browse your mistake library', [
         'Open Mistake library after Start reviewing to browse starting-board previews from your applied selection. Cards show game details, losses, attempt counts, and review status. Use the numbered page links or Previous and Next above or below the cards to browse more results. The current page is highlighted.',
@@ -28,7 +42,7 @@ SECTIONS = [
         'Hint highlights the piece to move on the board. The highlight clears when you make a move. Reveal solution and original mistake shows your original move, the engine line, and the evaluation change. Open original game is available when a game link was saved. Click Next puzzle when ready to continue.',
     ]),
     ('Finish a cycle or take a break', [
-        'A cycle visits each puzzle in your applied selection once. After the last puzzle, click Next puzzle to take a rest or repeat the round in shuffled order. To review other dates or settings, edit the sidebar and click Start reviewing.',
+        'Each new review starts in a shuffled order and visits each puzzle in your applied selection once. After the last puzzle, click Next puzzle to take a rest or repeat the round in shuffled order. To review other dates or settings, edit the sidebar and click Start reviewing.',
         'Starting over repeats the same round in a randomized order, including puzzles scheduled for later. Saved review progress is kept. It repeats all puzzles in that round, not only those answered incorrectly.',
     ]),
     ('Understand review scheduling', [

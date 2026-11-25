@@ -10,7 +10,12 @@ from ui_helpers import seed_review
 class TrainerUITests(unittest.TestCase):
     def app(self, library):
         from streamlit.testing.v1 import AppTest
-        return seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library)
+        app = seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library)
+        # Event-based tests address specific positions in a known round order.
+        import uuid
+        app.session_state.review_cycle = dict(ids=[p['id'] for p in library['puzzles']],
+            index=0, state='active', token=uuid.uuid4().hex)
+        return app
 
     def test_preload_and_reused_board_ignore_previous_puzzle_events(self):
         library = load_library()

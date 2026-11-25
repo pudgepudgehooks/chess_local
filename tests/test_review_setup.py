@@ -30,6 +30,27 @@ def enter_settings(app, threshold):
 
 
 class ReviewSetupUITests(unittest.TestCase):
+    def test_start_shuffles_once_and_preserves_order_until_next_start(self):
+        from streamlit.testing.v1 import AppTest
+        library = {'puzzles': [dict(mistake(), id=f'p{i}') for i in range(4)]}
+        with patch('visualization_all.load_library', return_value=library), \
+             patch('chess_analysis.fetch_chesscom_range', return_value=[]), \
+             patch('drag_board.drag_board', return_value=None), \
+             patch('random.shuffle', side_effect=lambda ids: ids.reverse()) as shuffle:
+            app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run()
+            enter_settings(app, 150)
+            app.button(key='start_review').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['review_cycle']['ids'], ['p3', 'p2', 'p1', 'p0'])
+            shuffle.assert_called_once()
+            app.button(key='next_puzzle').click().run()
+            app.button(key='previous_puzzle').click().run()
+            app.button(key='language_toggle').click().run()
+            self.assertEqual(app.session_state['review_cycle']['ids'], ['p3', 'p2', 'p1', 'p0'])
+            shuffle.assert_called_once()
+            app.button(key='start_review').click().run()
+            self.assertEqual(shuffle.call_count, 2)
+
     def test_presets_and_advanced_override_apply_to_the_review(self):
         from streamlit.testing.v1 import AppTest
         library = {'puzzles': [dict(mistake(), id=f'loss-{loss}', loss=loss) for loss in (150, 250, 350)]}
@@ -58,7 +79,7 @@ class ReviewSetupUITests(unittest.TestCase):
             app.number_input(key='analysis_threshold').set_value(200).run()
             app.button(key='start_review').click().run()
             self.assertEqual(app.session_state['review_setup']['threshold'], 200, 'custom overrides High')
-            self.assertEqual(app.session_state['review_cycle']['ids'], ['loss-250', 'loss-350'])
+            self.assertEqual(set(app.session_state['review_cycle']['ids']), {'loss-250', 'loss-350'})
             app.button(key='language_toggle').click().run()
             self.assertEqual(app.checkbox(key='analysis_use_custom_loss').label, '使用自定义最低失分')
             self.assertEqual(app.radio(key='analysis_loss_level').value, 'High')

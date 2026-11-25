@@ -33,6 +33,14 @@ def clear_private_state():
 
 
 def account_screen(accounts):
+    from trainer_guide import help_button, show_guide
+    if help_button():
+        st.title(tr('How it works'))
+        if st.button(tr('Back to sign in'), icon=':material/arrow_back:', key='back_to_signin'):
+            st.query_params.pop('page', None)
+            st.rerun()
+        show_guide(online=True, show_title=False)
+        return
     st.title(tr('Chess Trainer · Private Beta'))
     st.write(tr('Sign in with the username and password assigned by your group owner.'))
     st.html('''<style>

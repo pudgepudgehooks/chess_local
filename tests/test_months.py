@@ -36,13 +36,14 @@ class MonthTests(unittest.TestCase):
              patch('drag_board.drag_board', return_value=None) as board:
             app = seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')),
                               library, username='alice', start=date(2026, 8, 1), end=date(2026, 8, 31), due_only=False).run(timeout=30)
-            self.assertEqual(app.session_state['review_cycle']['ids'], ['aug-1', 'aug-2'])
+            self.assertEqual(set(app.session_state['review_cycle']['ids']), {'aug-1', 'aug-2'})
+            previous_order = list(app.session_state['review_cycle']['ids'])
             august_token = app.session_state['review_cycle']['token']
             app.button(key='next_puzzle').click().run()
             app.button(key='next_puzzle').click().run()
             with patch('random.shuffle', side_effect=lambda ids: ids.reverse()):
                 app.button(key='restart_cycle').click().run()
-            self.assertEqual(app.session_state['review_cycle']['ids'], ['aug-2', 'aug-1'])
+            self.assertEqual(app.session_state['review_cycle']['ids'], previous_order[::-1])
             choose_review(app, 'alice', date(2026, 9, 1), date(2026, 9, 30))
             self.assertEqual(app.session_state['active_id'], 'sep')
             self.assertNotEqual(app.session_state['review_cycle']['token'], august_token)

@@ -8,10 +8,16 @@ import chess
 import chess.pgn
 import streamlit as st
 from visualization_all import main
-from beta_app import account_menu
+from beta_app import account_menu, account_screen
 from i18n import language_selector
 from chess_analysis import filter_games_by_date
 from analysis_cache import coverage_records, LOCAL_POLICY
+
+if st.query_params.get('preview') == 'login':
+    # UI-only login/guide preview, without database access or real credentials.
+    language_selector()
+    account_screen(None)
+    st.stop()
 
 if 'preview_library' not in st.session_state:
     examples = [

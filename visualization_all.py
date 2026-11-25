@@ -8,7 +8,7 @@ from chess_analysis import engine_path
 from puzzle_store import is_due, load_library, record_review, save_library
 from drag_board import drag_board, consume_move, playback_frames, prepare_board
 from i18n import tr, language, language_selector, error_text, job_message
-from trainer_guide import show_guide
+from trainer_guide import show_guide, help_button
 from mistake_library import show_library
 from review_setup import setup_sidebar, filter_library, reset_round
 
@@ -91,17 +91,7 @@ def main(repository=None, playback_engine=None):
     if repository is None:
         language_selector()
         st.set_page_config(page_title=tr('Chess Mistake Trainer'), page_icon='♟')
-    guide_page = st.query_params.get('page') == 'help'
-    st.html('''<style>
-    .st-key-help_page{position:fixed;top:3.75rem;right:3.5rem;width:2.5rem;z-index:1000002}
-    .st-key-help_page button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
-    @supports(position-anchor:--chess-toolbar-actions){
-      .st-key-help_page{position-anchor:--chess-toolbar-actions;top:calc(anchor(center,1.625rem) - 1.25rem);left:calc(anchor(left) + 3rem);right:auto}
-    }
-    </style>''')
-    if st.button('', icon=':material/help_outline:', key='help_page', type='tertiary', help=tr('How it works')):
-        st.query_params['page'] = 'help'
-        guide_page = True
+    guide_page = help_button()
     st.title(tr('How it works' if guide_page else 'Chess Mistake Trainer'))
     if guide_page:
         if st.button(tr('Back to puzzles'), icon=':material/arrow_back:', key='back_to_puzzles'):
@@ -180,7 +170,9 @@ def trainer(repository, playback_engine, review_tab, library_tab, guide_page=Fal
 def practice_puzzles(library, repository, playback_engine, owned, available, due_only):
     cycle = st.session_state.get('review_cycle')
     if cycle is None:
-        cycle = {'ids': [pid for pid, p in available.items() if not due_only or is_due(p)],
+        ids = [pid for pid, p in available.items() if not due_only or is_due(p)]
+        random.shuffle(ids)
+        cycle = {'ids': ids,
                  'index': 0, 'state': 'active', 'token': uuid.uuid4().hex}
         st.session_state.review_cycle = cycle
     puzzles = [available[pid] for pid in cycle['ids'] if pid in available]

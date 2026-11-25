@@ -49,6 +49,7 @@ class LanguageTests(unittest.TestCase):
     def test_chinese_answer_validation(self):
         from puzzle_store import load_library
         library = load_library()
+        library['puzzles'] = library['puzzles'][:1]
         puzzle = library['puzzles'][0]
         with patch('puzzle_store.load_library', return_value=library), patch('drag_board.drag_board', return_value={'fen': puzzle['fen'], 'uci': '0000', 'event_id': 'invalid-zh'}) as component:
             app = seed_review(self.app(), library)
