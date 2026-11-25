@@ -96,7 +96,8 @@ def setup_sidebar(library, repository=None, progress_label=None):
         start = st.date_input(tr('Start date'), value=date.today().replace(day=1), min_value=date(1900, 1, 1),
                              max_value=date(2200, 12, 31), format='YYYY-MM-DD', key='analysis_start_date')
         end = st.date_input(tr('End date'), value=date.today(), min_value=date(1900, 1, 1),
-                           max_value=date(2200, 12, 31), format='YYYY-MM-DD', key='analysis_end_date')
+                           max_value=date(2200, 12, 31), format='YYYY-MM-DD', key='analysis_end_date',
+                           help=tr('Both dates are included. Sidebar edits apply only when you click Start reviewing.'))
         valid = True
         try:
             validate_date_range(start, end, max_days=366)
@@ -117,7 +118,6 @@ def setup_sidebar(library, repository=None, progress_label=None):
             else:
                 executable = st.text_input(tr('Stockfish executable path'), value=os.environ.get('STOCKFISH_PATH', ''), key='analysis_engine')
                 import_limit = st.number_input(tr('Maximum games to fetch'), 1, 100, 100, key='analysis_import_limit')
-        st.caption(tr('Both dates are included. Sidebar edits apply only when you click Start reviewing.'))
         if repository:
             st.caption(tr('Fetches up to 100 recent games. Each start analyzes at most five uncovered games; no daily analysis quota. Cached games do not need Stockfish again.'))
         pending = st.session_state.get('pending_review_setup')
