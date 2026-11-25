@@ -96,6 +96,9 @@ def setup_sidebar(library, repository=None, progress_label=None):
         st.header(tr('Review setup'))
         source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'],
             format_func=lambda value, lang=language(): tr({'Chess.com month': 'Chess.com', 'Lichess month': 'Lichess'}.get(value, value), _language=lang), key='analysis_source')
+        st.html('''<style>
+        .st-key-analysis_username [data-testid="InputInstructions"]{display:none}
+        </style>''')
         username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
             'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username', on_change=clean_username_input,
             help=tr('This is the chess username whose mistakes you want to review, not your app login.'))
