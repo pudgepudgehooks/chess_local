@@ -222,7 +222,8 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
     dragged_move = consume_move(event, board, seen)
     if new_event:
         move = dragged_move
-        result = {'event_id': event['event_id'], 'status': 'incorrect', 'frames': []}
+        result = {'event_id': event['event_id'], 'status': 'incorrect', 'frames': [],
+                  'uci': move.uci() if move is not None else None}
         message = 'The answer is incorrect, please try again'
         if move is None:
             result['status'] = 'incorrect'

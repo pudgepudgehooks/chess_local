@@ -34,24 +34,33 @@
       this.busy = this.solved = false;
       this.frames = []; this.index = 0;
       this.status = '';
+      this.feedback = null;
+    }
+    get visibleFeedback() {
+      return !this.solved || this.index === 0 ? this.feedback : null;
     }
     beginAttempt() {
       if (this.busy || this.solved) return false;
       this.status = '';
+      this.feedback = null;
       return true;
     }
     start(uci, eventId, previews) {
       if (this.busy || this.solved || !previews[uci]) return false;
       this.fen = previews[uci]; this.uci = uci; this.pendingId = eventId;
       this.busy = true; this.status = 'Checking move…';
+      this.feedback = null;
       return true;
     }
     receive(response) {
       if (!response || response.event_id === this.handledId ||
           (this.pendingId && response.event_id !== this.pendingId)) return false;
+      const answeredMove = response.uci || this.uci || response.frames?.[0]?.uci;
       this.handledId = response.event_id; this.pendingId = null;
       this.frames = response.frames || []; this.index = 0;
       this.solved = response.status === 'correct' && this.frames.length > 0;
+      this.feedback = (this.solved || response.status === 'incorrect') && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(answeredMove || '')
+        ? {square:answeredMove.slice(2,4), status:response.status} : null;
       this.busy = false;
       this.fen = this.solved ? this.frames[0].fen : this.originalFen;
       this.uci = this.solved ? this.frames[0].uci : null;

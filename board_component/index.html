@@ -8,6 +8,9 @@
 .dark{background:var(--board-dark)}.square svg{width:88%;height:88%;pointer-events:none}.square.selected{box-shadow:inset 0 0 0 4px #eebd45}.square.last{background:var(--board-light-last)}.square.dark.last{background:var(--board-dark-last)}.square.target:after{content:'';position:absolute;width:24%;height:24%;border-radius:50%;background:#4d2c1266;pointer-events:none}
 .square:focus-visible{outline:3px solid #2966d6;outline-offset:-3px;z-index:1}.coord{position:absolute;font-size:11px;line-height:1;pointer-events:none;font-weight:600}.rank{left:3px;top:3px}.file{right:3px;bottom:3px}
 .square.dragging svg{visibility:hidden}
+.answer-badge{position:absolute;top:1%;right:1%;width:38%;height:38%;display:grid;place-items:center;border-radius:50%;pointer-events:none;z-index:3;box-shadow:0 2px 0 #0003}
+.answer-correct{background:#81b64c}.answer-incorrect{background:#ff7468}
+.answer-badge svg{width:72%;height:72%;fill:none;stroke:#fff;stroke-width:4;stroke-linecap:square;stroke-linejoin:miter}
 #status{margin:8px 0;min-height:22px;font-size:14px;color:var(--app-text,#212121)}#promotion{background:#fff3e6;padding:10px;border:1px solid var(--board-dark);border-radius:5px;margin:8px 0}
 #promotion button,#continuation button{padding:9px;margin:3px;border:1px solid var(--board-dark);border-radius:4px;background:white;cursor:pointer}#continuation button:disabled{opacity:.45;cursor:default}
 #ghost{position:fixed;pointer-events:none;z-index:10;transform:translate(-50%,-50%)}#ghost svg{width:100%;height:100%}

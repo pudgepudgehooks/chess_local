@@ -11,6 +11,20 @@ function highlights() {
   for (const square of board.children) {
     square.classList.toggle('selected', square.dataset.square === selected);
     square.classList.toggle('target', !!selected && args.legal.some(m => m.slice(0,2) === selected && m.slice(2,4) === square.dataset.square));
+    const feedback = session.visibleFeedback;
+    let badge = square.querySelector('.answer-badge');
+    if (feedback?.square === square.dataset.square) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.setAttribute('role', 'img');
+        square.append(badge);
+      }
+      const correct = feedback.status === 'correct';
+      badge.className = 'answer-badge ' + (correct ? 'answer-correct' : 'answer-incorrect');
+      badge.setAttribute('aria-label', t(correct ? 'Correct answer' : 'Incorrect answer'));
+      badge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+
+        (correct ? 'M5 12l4 4L19 6' : 'M6 6l12 12M18 6L6 18')+'"/></svg>';
+    } else if (badge) badge.remove();
   }
 }
 function deselect() {
@@ -113,6 +127,7 @@ board.addEventListener('pointerdown', e => {
   const square=e.target.closest('[data-square]'); if (!square || e.button !== 0) return;
   const from=square.dataset.square; if (!args.pieces[from]?.own) return;
   session.beginAttempt(); status.textContent=t(session.status);
+  highlights();
   drag={from,x:e.clientX,y:e.clientY,moved:false,id:e.pointerId}; board.setPointerCapture(e.pointerId);
 });
 board.addEventListener('pointermove', e => {

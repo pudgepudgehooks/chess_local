@@ -3,6 +3,8 @@ import re
 import streamlit as st
 
 ZH = {
+    'Correct answer': '回答正确',
+    'Incorrect answer': '回答错误',
     'Mistake size': '失误程度',
     'Low': '低',
     'High': '高',
