@@ -36,6 +36,12 @@
       this.status = '';
       this.feedback = null;
       this.retryRequired = false;
+      this.hintSquare = null;
+    }
+    showHint(square) {
+      if (this.busy || this.solved || this.retryRequired || !/^[a-h][1-8]$/.test(square || '')) return false;
+      this.hintSquare = square;
+      return true;
     }
     get visibleFeedback() {
       return !this.solved || this.index === 0 ? this.feedback : null;
@@ -49,6 +55,7 @@
     start(uci, eventId, previews) {
       if (this.busy || this.solved || this.retryRequired || !previews[uci]) return false;
       this.fen = previews[uci]; this.uci = uci; this.pendingId = eventId;
+      this.hintSquare = null;
       this.busy = true; this.status = 'Checking move…';
       this.feedback = null;
       return true;
@@ -75,6 +82,7 @@
       if (!this.retryRequired) return false;
       this.retryRequired = false;
       this.fen = this.originalFen;
+      this.hintSquare = null;
       this.uci = null;
       this.feedback = null;
       this.status = '';

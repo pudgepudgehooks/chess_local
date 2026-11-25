@@ -5,6 +5,19 @@ import chess
 
 @unittest.skipUnless(importlib.util.find_spec('streamlit'), 'Streamlit is not installed')
 class DragBoardTests(unittest.TestCase):
+    def test_preloaded_positions_reuse_legal_previews(self):
+        from drag_board import prepare_board
+        prepare_board.cache_clear()
+        fen = chess.STARTING_FEN
+        prepared = prepare_board(fen)
+        self.assertIs(prepare_board(fen), prepared)
+        board = chess.Board(fen)
+        self.assertEqual(set(prepared['legal']), {m.uci() for m in board.legal_moves})
+        for uci, preview in prepared['previews'].items():
+            after = board.copy()
+            after.push_uci(uci)
+            self.assertEqual(after.fen(), preview)
+
     def test_replayed_and_stale_events_do_not_repeat_reviews(self):
         from drag_board import consume_move
         board = chess.Board()

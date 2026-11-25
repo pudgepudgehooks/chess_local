@@ -1,5 +1,6 @@
 """Offline Streamlit board component and defensive move-event handling."""
 from pathlib import Path
+from functools import lru_cache
 import chess
 import chess.svg
 import chess.engine
@@ -8,6 +9,11 @@ from i18n import tr, language
 from board_theme import BOARD_COLORS
 
 _component = declare_component('chess_drag_board', path=str(Path(__file__).parent / 'board_component'))
+
+
+@lru_cache(maxsize=12)
+def piece_svg(symbol):
+    return chess.svg.piece(chess.Piece.from_symbol(symbol))
 
 
 def playback_frames(board, move, puzzle, executable=None):
@@ -43,17 +49,26 @@ def playback_frames(board, move, puzzle, executable=None):
     return frames
 
 
-def drag_board(board, key, response=None):
+@lru_cache(maxsize=256)
+def prepare_board(fen):
+    """Cache immutable position data, including every legal drop preview."""
+    board = chess.Board(fen)
     previews = {}
     for move in board.legal_moves:
         after = board.copy()
         after.push(move)
         previews[move.uci()] = after.fen()
+    return {'previews': previews, 'legal': list(previews)}
+
+
+def drag_board(board, key, response=None, context_id=None, hint_square=None):
+    prepared = prepare_board(board.fen())
     return _component(
         fen=board.fen(), white=board.turn == chess.WHITE,
-        response=response, previews=previews, colors=BOARD_COLORS,
+        response=response, context_id=context_id, hint_square=hint_square,
+        previews=prepared['previews'], colors=BOARD_COLORS,
         assets={chess.Piece(piece, color).symbol(): {
-            'svg': chess.svg.piece(chess.Piece(piece, color)),
+            'svg': piece_svg(chess.Piece(piece, color).symbol()),
             'label': f"{tr('White' if color else 'Black')} {tr(chess.piece_name(piece))}",
         } for color in [chess.WHITE, chess.BLACK] for piece in chess.PIECE_TYPES},
         language=language(),
@@ -61,6 +76,7 @@ def drag_board(board, key, response=None):
             'Chess puzzle board', 'empty',
             'Correct answer', 'Incorrect answer',
             'Try again', 'Reset the board and try again',
+            'Hint',
             'Move submitted. See the result below the board.', 'Illegal move. Try another destination.',
             'Promote to:', 'Queen', 'Rook', 'Bishop', 'Knight', 'Cancel', 'Choose your promotion piece.',
             'Checking move…', 'The answer is incorrect, please try again',
@@ -72,11 +88,11 @@ def drag_board(board, key, response=None):
             'Could not save your review. Please try again.',
         ]},
         pieces={chess.square_name(s): {
-            'svg': chess.svg.piece(p),
+            'svg': piece_svg(p.symbol()),
             'label': f"{tr('White' if p.color else 'Black')} {tr(chess.piece_name(p.piece_type))}",
             'own': p.color == board.turn,
         } for s, p in board.piece_map().items()},
-        legal=[m.uci() for m in board.legal_moves], key=key, default=None,
+        legal=prepared['legal'], key=key, default=None,
     )
 
 

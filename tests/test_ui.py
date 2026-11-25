@@ -12,6 +12,35 @@ class TrainerUITests(unittest.TestCase):
         from streamlit.testing.v1 import AppTest
         return seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library)
 
+    def test_preload_and_reused_board_ignore_previous_puzzle_events(self):
+        library = load_library()
+        first = library['puzzles'][0]
+        second = dict(first, id='same-position-next-puzzle')
+        library['puzzles'] = [first, second]
+        with patch('puzzle_store.load_library', return_value=library), \
+             patch('puzzle_store.save_library') as save, \
+             patch('drag_board.prepare_board') as prepare, \
+             patch('drag_board.drag_board', return_value=None) as component:
+            app = self.app(library).run(timeout=30)
+            self.assertFalse(app.exception)
+            self.assertIn(second['fen'], [call.args[0] for call in prepare.call_args_list])
+            board_key = component.call_args.kwargs['key']
+            self.assertEqual(component.call_args.kwargs['hint_square'], first['best_move'][:2])
+            captions = '\n'.join(item.value for item in app.caption)
+            self.assertNotIn('Reviewing ', captions)
+            self.assertNotIn('Reused saved analysis', captions)
+            self.assertNotIn('Drag a piece', captions)
+            self.assertFalse(any(b.label == 'Hint' for b in app.button), 'hint is handled inside the board')
+            component.return_value = dict(fen=first['fen'], uci=first['best_move'],
+                                          context_id=first['id'], event_id='delayed-old-puzzle')
+            app.button(key='next_puzzle').click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state['active_id'], second['id'])
+            self.assertEqual(component.call_args.kwargs['key'], board_key)
+            self.assertEqual(component.call_args.kwargs['context_id'], second['id'])
+            self.assertIsNone(component.call_args.kwargs['response'])
+            save.assert_not_called()
+
     def test_alternative_feedback_and_own_continuation_in_both_languages(self):
         import chess
         for continuation in (True, False):
@@ -103,7 +132,6 @@ class TrainerUITests(unittest.TestCase):
             app.run()
             self.assertTrue(app.success)
             self.assertEqual(save.call_count, 2)
-            app.button(key=f"hint-{first['id']}").click().run()
             self.assertEqual(app.session_state['active_id'], first['id'])
             app.button(key='next_puzzle').click().run()
             second = library['puzzles'][1]

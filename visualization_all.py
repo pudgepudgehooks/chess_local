@@ -6,7 +6,7 @@ import chess
 import streamlit as st
 from chess_analysis import engine_path
 from puzzle_store import is_due, load_library, record_review, save_library
-from drag_board import drag_board, consume_move, playback_frames
+from drag_board import drag_board, consume_move, playback_frames, prepare_board
 from i18n import tr, language, language_selector, error_text, job_message
 from trainer_guide import show_guide
 from mistake_library import show_library
@@ -132,14 +132,9 @@ def trainer(repository, playback_engine, review_tab, library_tab):
         with library_tab:
             st.info(tr('Click Start reviewing in the sidebar to choose which saved puzzles to browse.'))
         return
-    summary = tr('Reviewing {username} · {start} to {end} · Minimum loss: {loss} centipawns',
-                 username=setup['username'], start=setup['start'].isoformat(), end=setup['end'].isoformat(), loss=setup['threshold'])
     plan = st.session_state.get('review_plan', {})
     if st.session_state.get('review_cycle', {}).get('state') not in ('complete', 'rest'):
         with review_tab:
-            st.caption(summary)
-            if plan.get('reused'):
-                st.caption(tr('Reused saved analysis for {count} games. No repeat analysis was needed for those games.', count=plan['reused']))
             if plan.get('selected'):
                 st.caption(tr('Analyzed {count} games for this review.', count=plan['selected']))
             if plan.get('remaining'):
@@ -201,25 +196,26 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         return
     index = min(cycle['index'], len(puzzles) - 1)
     puzzle = puzzles[index]
+    # Prepare a bounded look-ahead without running Stockfish or saving reviews.
+    # These cached legal positions are reused when Next puzzle is clicked.
+    for upcoming in puzzles[index:index + 4]:
+        prepare_board(upcoming['fen'])
     st.session_state.active_id = puzzle['id']
     board = chess.Board(puzzle['fen'])
     st.write(tr('Puzzle {index} of {total} · {side} to move', index=index + 1, total=len(puzzles), side=tr('White' if board.turn else 'Black')))
     if puzzle.get('legacy'):
         st.warning(tr('Imported sample: player ownership and game source are unknown. Regenerate games for verified personal puzzles.'))
-    else:
-        st.caption(tr('{username} vs {opponent} · {date} · move {number}', username=puzzle['username'], opponent=puzzle['opponent'], date=puzzle['date'], number=puzzle['move_number']))
-        if puzzle.get('platform'):
-            st.caption(tr('Platform: {platform}', platform=puzzle['platform']))
     key = f"{repository.owner}-{puzzle['id']}" if repository else puzzle['id']
-    st.caption(tr('Drag a piece to make your move.'))
     previous = st.session_state.get('board_feedback', {})
     response = previous.get('response') if previous.get('key') == key else None
-    event = drag_board(board, key=f"board-{key}-{cycle['token']}", response=response)
+    event = drag_board(board, key=f"board-{cycle['token']}", response=response,
+                       context_id=key, hint_square=puzzle['best_move'][:2])
     seen = st.session_state.setdefault('board_events', [])
     new_event = (isinstance(event, dict) and event.get('fen') == board.fen()
+                 and event.get('context_id', key) == key
                  and isinstance(event.get('event_id'), str) and bool(event['event_id'])
                  and event['event_id'] not in seen)
-    dragged_move = consume_move(event, board, seen)
+    dragged_move = consume_move(event, board, seen) if new_event else None
     if new_event:
         move = dragged_move
         result = {'event_id': event['event_id'], 'status': 'incorrect', 'frames': [],
@@ -272,11 +268,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
     if response:
         if response['status'] == 'correct':
             st.success(tr(response['message'], **response.get('message_values', {})))
-        # Incorrect-answer feedback lives on the board so it can clear instantly
-        # when the user picks up a piece for their next attempt.
-    if st.button(tr('Hint'), key=f'hint-{key}'):
-        best = chess.Move.from_uci(puzzle['best_move'])
-        st.info(tr('Look at the {piece} on {square}.', piece=tr(chess.piece_name(board.piece_type_at(best.from_square))), square=chess.square_name(best.from_square)))
+        # Incorrect-answer feedback clears locally when Retry resets the board.
     with st.expander(tr('Reveal solution and original mistake')):
         st.write(tr('Your game move: **{move}**', move=board.san(chess.Move.from_uci(puzzle['played']))))
         line_board = board.copy()
@@ -297,11 +289,11 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
             st.link_button(tr('Open original game'), url)
     review = puzzle.get('review', {})
     st.caption(tr('Saved attempts: {attempts} · Correct: {correct}', attempts=review.get('attempts', 0), correct=review.get('correct', 0)))
-    if st.button(tr('Next puzzle'), key='next_puzzle'):
+    def next_puzzle():
         cycle['index'] = index + 1
         if cycle['index'] >= len(puzzles):
             cycle['state'] = 'complete'
         st.session_state.pop('board_feedback', None)
-        st.rerun()
+    st.button(tr('Next puzzle'), key='next_puzzle', on_click=next_puzzle)
 if __name__ == '__main__':
     main()

@@ -84,4 +84,17 @@ assert.equal(restoredWrong.fen,moved,'remount restores the wrong position while 
 assert(restoredWrong.retry());
 assert.equal(restoredWrong.fen,start);
 assert(!restoredWrong.receive({event_id:'restored-wrong',status:'incorrect',uci:'e2e4',attempt_fen:moved,frames:[]}), 'stale feedback cannot undo a manual reset');
+const hinted = new BoardSession(start);
+assert(hinted.showHint('e2'));
+assert.equal(hinted.hintSquare, 'e2');
+assert(hinted.beginAttempt());
+assert.equal(hinted.hintSquare, 'e2', 'picking up a piece alone preserves the hint');
+assert(hinted.start('e2e4', 'hinted', {e2e4:moved}));
+assert.equal(hinted.hintSquare, null, 'submitting a move clears the hint');
+assert(!hinted.showHint('e2'), 'cannot show a hint while checking');
+hinted.receive({event_id:'hinted', status:'incorrect', uci:'e2e4', attempt_fen:moved});
+assert(!hinted.showHint('e2'), 'reset the wrong move before asking for a hint');
+assert(hinted.retry());
+assert(hinted.showHint('e2'));
+assert(!hinted.showHint('invalid'));
 console.log('Board state tests passed');

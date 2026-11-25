@@ -3,6 +3,7 @@ const board = document.getElementById('board'), status = document.getElementById
 const ghost = document.getElementById('ghost'), promotion = document.getElementById('promotion');
 const navigation = document.getElementById('continuation'), back = document.getElementById('back'), forward = document.getElementById('forward');
 const retry = document.getElementById('retry');
+const hint = document.getElementById('hint');
 let args = null, session = null, selected = null, drag = null, suppressClick = false;
 let renderedFen = null, renderedWhite = null;
 const send = (type, data={}) => window.parent.postMessage({isStreamlitMessage:true, type, ...data}, '*');
@@ -11,6 +12,7 @@ function height() { send('streamlit:setFrameHeight', {height:document.getElement
 function highlights() {
   for (const square of board.children) {
     square.classList.toggle('selected', square.dataset.square === selected);
+    square.classList.toggle('hinted', square.dataset.square === session.hintSquare);
     square.classList.toggle('target', !!selected && args.legal.some(m => m.slice(0,2) === selected && m.slice(2,4) === square.dataset.square));
     const feedback = session.visibleFeedback;
     let badge = square.querySelector('.answer-badge');
@@ -34,6 +36,7 @@ function deselect() {
   highlights(); height();
 }
 function render({animate=true, drop=null}={}) {
+  const animations = [];
   const pieces = placement(session.fen);
   const files = args.white ? 'abcdefgh' : 'hgfedcba', ranks = args.white ? '87654321' : '12345678';
   const changed = renderedFen !== session.fen || renderedWhite !== args.white;
@@ -69,6 +72,7 @@ function render({animate=true, drop=null}={}) {
           {transform:'translate(0, 0)'},
         ], {duration:drop?.to === to ? 110 : 220, easing:'cubic-bezier(0.22, 0.61, 0.36, 1)'});
         animation.onfinish = animation.oncancel = () => { square.style.zIndex = ''; };
+        animations.push(animation.finished.catch(() => {}));
       }
     }
   } else {
@@ -87,16 +91,20 @@ function render({animate=true, drop=null}={}) {
   retry.hidden = !session.retryRequired;
   retry.setAttribute('aria-label', t('Try again'));
   retry.title = t('Reset the board and try again');
+  hint.querySelector('span').textContent = t('Hint');
+  hint.setAttribute('aria-label', t('Hint'));
+  hint.disabled = session.busy || session.solved || session.retryRequired;
   back.disabled = session.index < 0; back.textContent = '← '+t('Back');
   forward.disabled = session.index >= session.frames.length - 1; forward.textContent = t('Forward')+' →';
   height();
+  return Promise.all(animations);
 }
 function submit(uci, dropRect=null) {
   const eventId = crypto.randomUUID();
   if (!session.start(uci, eventId, args.previews)) return;
   deselect(); render({drop:dropRect ? {to:uci.slice(2,4), rect:dropRect} : null});
   ChessMoveSound.play();
-  send('streamlit:setComponentValue', {value:{uci, fen:args.fen, event_id:eventId}, dataType:'json'});
+  send('streamlit:setComponentValue', {value:{uci, fen:args.fen, context_id:args.context_id, event_id:eventId}, dataType:'json'});
 }
 function attempt(from, to, dropRect=null) {
   if (session.busy || session.solved || session.retryRequired) return;
@@ -162,12 +170,23 @@ board.addEventListener('pointercancel', deselect);
 document.addEventListener('keydown', e => { if (e.key==='Escape') deselect(); });
 back.onclick=() => { if (session.retreat()) { render(); ChessMoveSound.play(); } };
 forward.onclick=() => { if (session.advance()) { render(); ChessMoveSound.play(); } };
-retry.onclick=() => { if (session.retry()) { deselect(); render(); } };
+retry.onclick=async () => {
+  if (!session.retry()) return;
+  const resetting = session;
+  deselect();
+  await render();
+  if (session === resetting && session.fen === session.originalFen) ChessMoveSound.play();
+};
+hint.onclick=() => { if (session.showHint(args.hint_square)) highlights(); };
 window.addEventListener('message', e => {
   if (e.source!==window.parent || e.data.type!=='streamlit:render') return;
   const incoming=e.data.args;
-  const contextChanged=!session || session.originalFen!==incoming.fen;
-  if (contextChanged) session=new BoardSession(incoming.fen);
+  const contextChanged=!session || session.originalFen!==incoming.fen || args?.context_id!==incoming.context_id;
+  if (contextChanged) {
+    session=new BoardSession(incoming.fen);
+    selected=null; drag=null; ghost.hidden=true; promotion.hidden=true;
+    renderedFen=null;
+  }
   args=incoming;
   if (e.data.theme?.textColor) document.documentElement.style.setProperty('--app-text', e.data.theme.textColor);
   for (const [name, variable] of Object.entries({
