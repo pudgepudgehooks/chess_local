@@ -35,6 +35,10 @@ def clear_private_state():
 def account_screen(accounts):
     st.title(tr('Chess Trainer · Private Beta'))
     st.write(tr('Sign in with the username and password assigned by your group owner.'))
+    st.html('''<style>
+    .st-key-account_login [data-testid="InputInstructions"] > span:first-child{display:none}
+    .st-key-account_login [data-testid="InputInstructions"] > span:nth-child(2)::before{display:none}
+    </style>''')
     with st.form('account_login', clear_on_submit=True):
         username = st.text_input(tr('Username'), max_chars=32, key='account_username')
         password = st.text_input(tr('Password'), type='password', max_chars=128, key='account_password')
