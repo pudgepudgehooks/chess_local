@@ -8,6 +8,8 @@ import chess
 import chess.pgn
 import streamlit as st
 from visualization_all import main
+from beta_app import account_menu
+from i18n import language_selector
 from chess_analysis import filter_games_by_date
 from analysis_cache import coverage_records, LOCAL_POLICY
 
@@ -59,4 +61,9 @@ with patch('visualization_all.load_library', return_value=st.session_state.previ
      patch('visualization_all.save_library'), patch('puzzle_store.save_library'), \
      patch('chess_analysis.fetch_chesscom_range', side_effect=fetch_preview), \
      patch('chess_analysis.fetch_lichess_range', side_effect=fetch_preview):
-    main()
+    language_selector()
+    account_menu('PreviewPlayer', lambda: st.info('Preview account only.'))
+    # main normally renders the language icon for local mode. This fixture
+    # already rendered it to mirror the online header before the account menu.
+    with patch('visualization_all.language_selector'):
+        main()

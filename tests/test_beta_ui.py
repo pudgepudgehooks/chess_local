@@ -51,6 +51,10 @@ class BetaGateUITests(unittest.TestCase):
                     token = app.session_state['account_token']
                     self.assertEqual(app.session_state['_session_cookie_command']['token'], token)
                     self.assertFalse(any('A full page refresh requires' in item.value for item in app.caption))
+                    self.assertFalse(any('Signed in as' in item.value for item in app.sidebar.caption))
+                    self.assertFalse(any(b.label == 'Sign out' for b in app.sidebar.button))
+                    self.assertTrue(any('Signed in as alice' in item.value for item in app.markdown))
+                    self.assertFalse(any('Fetches up to 100 recent games.' in item.value for item in app.caption))
                     # A new AppTest has no Streamlit session state, like a browser refresh.
                     refreshed = self.app()
                     refreshed.secrets['beta'] = app.secrets['beta']

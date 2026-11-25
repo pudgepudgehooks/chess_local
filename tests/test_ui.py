@@ -25,6 +25,7 @@ class TrainerUITests(unittest.TestCase):
             self.assertFalse(app.exception)
             self.assertIn(second['fen'], [call.args[0] for call in prepare.call_args_list])
             board_key = component.call_args.kwargs['key']
+            self.assertTrue(app.button(key='previous_puzzle').disabled)
             self.assertEqual(component.call_args.kwargs['hint_square'], first['best_move'][:2])
             captions = '\n'.join(item.value for item in app.caption)
             self.assertNotIn('Reviewing ', captions)
@@ -39,6 +40,11 @@ class TrainerUITests(unittest.TestCase):
             self.assertEqual(component.call_args.kwargs['key'], board_key)
             self.assertEqual(component.call_args.kwargs['context_id'], second['id'])
             self.assertIsNone(component.call_args.kwargs['response'])
+            self.assertFalse(app.button(key='previous_puzzle').disabled)
+            component.return_value = None
+            app.button(key='previous_puzzle').click().run()
+            self.assertEqual(app.session_state['active_id'], first['id'])
+            self.assertTrue(app.button(key='previous_puzzle').disabled)
             save.assert_not_called()
 
     def test_alternative_feedback_and_own_continuation_in_both_languages(self):

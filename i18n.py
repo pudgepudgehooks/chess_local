@@ -3,6 +3,8 @@ import re
 import streamlit as st
 
 ZH = {
+    'Account': '账号',
+    'Previous puzzle': '上一题',
     'Try again': '再试一次',
     'Reset the board and try again': '复原棋盘并再试一次',
     'Correct answer': '回答正确',

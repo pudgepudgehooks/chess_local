@@ -58,6 +58,21 @@ def account_screen(accounts):
             st.error(tr('Account service is temporarily unavailable. Please try again later.'))
 
 
+def account_menu(username, sign_out):
+    st.html('''<style>
+    [data-testid="stToolbarActions"]{padding-inline-start:13rem}
+    .st-key-account_menu{position:fixed;top:3.75rem;right:6.25rem;width:7rem;z-index:1000002}
+    .st-key-account_menu [data-testid="stPopoverButton"]{height:2.5rem;padding:0.25rem 0.5rem;border:0;background:transparent}
+    @supports(position-anchor:--chess-toolbar-actions){
+      .st-key-account_menu{position-anchor:--chess-toolbar-actions;top:calc(anchor(center,1.625rem) - 1.25rem);left:calc(anchor(left) + 6rem);right:auto}
+    }
+    </style>''')
+    with st.popover(tr('Account'), key='account_menu'):
+        st.write(tr('Signed in as {username}', username=username))
+        if st.button(tr('Sign out'), key='beta_logout'):
+            sign_out()
+
+
 def main():
     language_selector()
     st.set_page_config(page_title=tr('Chess Trainer · Private Beta'), page_icon='♟')
@@ -98,13 +113,12 @@ def main():
         st.session_state.beta_owner = owner
     browser_session.ensure(token)
     browser_session.sync()
-    with st.sidebar:
-        st.caption(tr('Signed in as {username}', username=identity['username']))
-        if st.button(tr('Sign out'), key='beta_logout'):
-            accounts.logout(st.session_state.account_token)
-            clear_private_state()
-            browser_session.forget()
-            st.rerun()
+    def sign_out():
+        accounts.logout(st.session_state.account_token)
+        clear_private_state()
+        browser_session.forget()
+        st.rerun()
+    account_menu(identity['username'], sign_out)
     try:
         from chess_analysis import engine_path
         from beta_store import UserLibrary

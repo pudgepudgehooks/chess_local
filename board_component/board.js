@@ -84,7 +84,7 @@ function render({animate=true, drop=null}={}) {
   }
   highlights();
   const quietStatus = ['Correct! Use Forward and Back to review the continuation.',
-    'Click Next Puzzle to proceed.', 'The answer is incorrect, please try again'];
+    'Click Next Puzzle to proceed.', 'The answer is incorrect, please try again', 'Checking move…'];
   status.textContent = quietStatus.includes(session.status) ? '' : t(session.status, args.response?.message_values || {});
   status.hidden = !status.textContent;
   navigation.hidden = !session.solved;
