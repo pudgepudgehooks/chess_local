@@ -1,4 +1,4 @@
-/* Original, locally synthesized wooden piece-on-board tap. No external audio files. */
+/* Crisp wooden piece-on-board tap with a short, non-resonant impact. */
 (function(root) {
   let context, impact;
   function play() {
@@ -7,17 +7,17 @@
       if (!AudioContext) return;
       if (!context || context.state === 'closed') {
         context = new AudioContext();
-        impact = context.createBuffer(1, Math.ceil(context.sampleRate * 0.1), context.sampleRate);
+        impact = context.createBuffer(1, Math.ceil(context.sampleRate * 0.075), context.sampleRate);
         const samples = impact.getChannelData(0);
-        const smoothing = 1 - Math.exp(-2 * Math.PI * 850 / context.sampleRate);
+        const smoothing = 1 - Math.exp(-2 * Math.PI * 1800 / context.sampleRate);
         let wood = 0;
         for (let i = 0; i < samples.length; i++) {
           const time = i / context.sampleRate;
           wood += smoothing * ((Math.random() * 2 - 1) - wood);
-          const attack = Math.min(1, time / 0.0015);
-          const body = 0.5 * Math.sin(2 * Math.PI * 190 * time) * Math.exp(-time * 90)
-            + 0.18 * Math.sin(2 * Math.PI * 340 * time) * Math.exp(-time * 125);
-          samples[i] = attack * (body + 0.75 * wood * Math.exp(-time * 100));
+          const attack = Math.min(1, time / 0.0006);
+          const body = 0.36 * Math.sin(2 * Math.PI * 230 * time) * Math.exp(-time * 110)
+            + 0.14 * Math.sin(2 * Math.PI * 430 * time) * Math.exp(-time * 150);
+          samples[i] = attack * (body + 0.95 * wood * Math.exp(-time * 180));
         }
       }
       const click = () => {
@@ -28,9 +28,9 @@
         const volume = context.createGain();
         source.buffer = impact;
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1100, now);
+        filter.frequency.setValueAtTime(2200, now);
         filter.Q.setValueAtTime(0.5, now);
-        volume.gain.setValueAtTime(0.7, now);
+        volume.gain.setValueAtTime(0.8, now);
         source.connect(filter);
         filter.connect(volume);
         volume.connect(context.destination);
