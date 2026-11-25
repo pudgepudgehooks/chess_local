@@ -62,6 +62,9 @@ def show_guide(online=False, show_title=True):
     for title, paragraphs in SECTIONS:
         st.subheader(tr(title))
         for paragraph in paragraphs:
+            if online and title == 'Start a review' and paragraph == paragraphs[0]:
+                st.write(tr('Your saved Chess.com username is used automatically. Choose dates and mistake size, then click Start reviewing. To save a different default, open Account. For a temporary Chess.com, Lichess, or PGN player, enable Use a different player for this review in Advanced settings. The temporary choice applies to the selected round and resets after Start reviewing; your next start uses the saved default.'))
+                continue
             st.write(tr(paragraph))
     if online:
         st.subheader(tr('Online beta and your saved library'))

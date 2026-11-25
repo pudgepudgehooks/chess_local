@@ -191,9 +191,10 @@ class BetaStore:
 
 
 class UserLibrary:
-    def __init__(self, store, owner, authorize=None):
+    def __init__(self, store, owner, authorize=None, default_username=None):
         self.store, self.owner = store, owner
         self.authorize = authorize
+        self.default_username = default_username
 
     def _check_access(self):
         if self.authorize is not None and not self.authorize():

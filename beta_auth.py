@@ -23,6 +23,10 @@ sessions = Table('beta_sessions', metadata,
 attempts = Table('beta_auth_attempts', metadata,
     Column('key', String(64), primary_key=True), Column('started', Float, nullable=False),
     Column('count', Integer, nullable=False))
+player_preferences = Table('beta_player_preferences', metadata,
+    Column('owner', String(64), primary_key=True),
+    Column('chesscom_username', String(50), nullable=False))
+INITIAL_PLAYERS = {'deer': 'timberrrrrrrr', 'bear': 'ursabearattack', 'coco': 'mimiyamg'}
 PASSWORDS = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
 DUMMY_HASH = PASSWORDS.hash(secrets.token_urlsafe(32))
 SESSION_SECONDS = 12 * 3600
@@ -77,12 +81,15 @@ class Accounts:
             db.execute(delete(sessions).where(sessions.c.owner.in_(disabled)))
             for username, password_hash in self.configured.items():
                 row = db.execute(select(users).where(users.c.username == username)).mappings().first()
+                owner = row['id'] if row else uuid.uuid4().hex
                 if row is None:
-                    db.execute(users.insert().values(id=uuid.uuid4().hex, username=username,
+                    db.execute(users.insert().values(id=owner, username=username,
                         password_hash=password_hash, created=time.time()))
                 elif row['password_hash'] != password_hash:
                     db.execute(update(users).where(users.c.id == row['id']).values(password_hash=password_hash))
                     db.execute(delete(sessions).where(sessions.c.owner == row['id']))
+                if username in INITIAL_PLAYERS and not db.execute(select(player_preferences.c.owner).where(player_preferences.c.owner == owner)).first():
+                    db.execute(player_preferences.insert().values(owner=owner, chesscom_username=INITIAL_PLAYERS[username]))
 
     def _lock(self, db):
         db.execute(select(guard).where(guard.c.id == 1).with_for_update()).first()
@@ -143,3 +150,29 @@ class Accounts:
     def logout(self, token):
         with self.engine.begin() as db:
             db.execute(delete(sessions).where(sessions.c.token_hash == digest(token)))
+
+    def player_username(self, token):
+        identity = self.identity(token)
+        if identity is None:
+            raise ValueError('Your session expired. Please sign in again.')
+        with self.engine.connect() as db:
+            return db.execute(select(player_preferences.c.chesscom_username).where(
+                player_preferences.c.owner == identity['id'])).scalar_one_or_none() or ''
+
+    def save_player_username(self, token, username):
+        from player_names import normalize_player_username
+        if not isinstance(token, str) or not 20 <= len(token) <= 128:
+            raise ValueError('Your session expired. Please sign in again.')
+        username = normalize_player_username(username)
+        with self.engine.begin() as db:
+            self._lock(db)
+            row = db.execute(select(users.c.id, users.c.username).join(sessions, users.c.id == sessions.c.owner).where(
+                sessions.c.token_hash == digest(token), sessions.c.expires > time.time())).mappings().first()
+            if row is None or row['username'] not in self.configured:
+                raise ValueError('Your session expired. Please sign in again.')
+            owner = row['id']
+            if db.execute(select(player_preferences.c.owner).where(player_preferences.c.owner == owner)).first():
+                db.execute(update(player_preferences).where(player_preferences.c.owner == owner).values(chesscom_username=username))
+            else:
+                db.execute(player_preferences.insert().values(owner=owner, chesscom_username=username))
+        return username

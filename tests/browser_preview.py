@@ -68,8 +68,20 @@ with patch('visualization_all.load_library', return_value=st.session_state.previ
      patch('chess_analysis.fetch_chesscom_range', side_effect=fetch_preview), \
      patch('chess_analysis.fetch_lichess_range', side_effect=fetch_preview):
     language_selector()
-    account_menu('PreviewPlayer', lambda: st.info('Preview account only.'))
+    repository = None
+    if st.query_params.get('preview') == 'defaults':
+        from types import SimpleNamespace
+        saved = st.session_state.setdefault('preview_default_player', 'PreviewPlayer')
+        def save_preview_player(player):
+            from player_names import normalize_player_username
+            st.session_state.preview_default_player = normalize_player_username(player)
+        account_menu('Preview account', lambda: st.info('Preview account only.'), saved, save_preview_player)
+        repository = SimpleNamespace(owner='preview', default_username=saved,
+            load=lambda: st.session_state.preview_library, recent_jobs=lambda: [],
+            prepare_analysis=lambda *args: dict(job_id=None, fetched=6, reused=6, selected=0))
+    else:
+        account_menu('PreviewPlayer', lambda: st.info('Preview account only.'))
     # main normally renders the language icon for local mode. This fixture
     # already rendered it to mirror the online header before the account menu.
     with patch('visualization_all.language_selector'):
-        main()
+        main(repository)

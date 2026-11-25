@@ -62,6 +62,10 @@ class BetaGateUITests(unittest.TestCase):
                     self.assertFalse(any(b.label == 'Sign out' for b in app.sidebar.button))
                     self.assertTrue(any('Signed in as alice' in item.value for item in app.markdown))
                     self.assertFalse(any('Fetches up to 100 recent games.' in item.value for item in app.caption))
+                    app.text_input(key='account_player_username').set_value('AliceChess')
+                    next(b for b in app.button if b.label == 'Save default username').click().run()
+                    self.assertFalse(app.exception)
+                    self.assertEqual(app.text_input(key='analysis_username').value, 'AliceChess')
                     # A new AppTest has no Streamlit session state, like a browser refresh.
                     refreshed = self.app()
                     refreshed.secrets['beta'] = app.secrets['beta']
@@ -71,6 +75,7 @@ class BetaGateUITests(unittest.TestCase):
                     self.assertEqual(refreshed.session_state['account_token'], token)
                     self.assertEqual(refreshed.session_state['beta_owner'], app.session_state['beta_owner'])
                     self.assertFalse(any(t.label == 'Username' for t in refreshed.text_input))
+                    self.assertEqual(refreshed.text_input(key='analysis_username').value, 'AliceChess')
                     legacy = self.app()
                     legacy.secrets['beta'] = app.secrets['beta']
                     legacy.session_state.account_token = token

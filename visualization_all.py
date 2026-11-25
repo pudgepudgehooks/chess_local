@@ -136,7 +136,10 @@ def trainer(repository, playback_engine, review_tab, library_tab, guide_page=Fal
         return
     if setup is None:
         with review_tab:
-            st.info(tr('Choose your chess username, dates, and minimum loss in the left sidebar, then click Start reviewing.'))
+            if getattr(repository, 'default_username', None) is not None:
+                st.info(tr('Choose dates and mistake size in the sidebar, then click Start reviewing. Manage your default player in Account, or choose a temporary player in Advanced settings.'))
+            else:
+                st.info(tr('Choose your chess username, dates, and minimum loss in the left sidebar, then click Start reviewing.'))
         with library_tab:
             st.info(tr('Click Start reviewing in the sidebar to choose which saved puzzles to browse.'))
         return

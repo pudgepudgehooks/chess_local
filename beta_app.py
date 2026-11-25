@@ -66,7 +66,7 @@ def account_screen(accounts):
             st.error(tr('Account service is temporarily unavailable. Please try again later.'))
 
 
-def account_menu(username, sign_out):
+def account_menu(username, sign_out, default_player=None, save_player=None):
     st.html('''<style>
     [data-testid="stToolbarActions"]{padding-inline-start:13rem}
     .st-key-account_menu{position:fixed;top:3.75rem;right:6.25rem;width:7rem;z-index:1000002}
@@ -77,6 +77,24 @@ def account_menu(username, sign_out):
     </style>''')
     with st.popover(tr('Account'), key='account_menu'):
         st.write(tr('Signed in as {username}', username=username))
+        if default_player is not None:
+            st.caption(tr('Default Chess.com username: {username}', username=default_player or tr('Not set')))
+            with st.form('save_player_default'):
+                player = st.text_input(tr('Default Chess.com username'), value=default_player,
+                    key='account_player_username', help=tr('Saving changes the default for future reviews.'))
+                submitted = st.form_submit_button(tr('Save default username'))
+            if submitted and save_player is not None:
+                try:
+                    save_player(player)
+                    st.session_state.player_default_saved = True
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(error_text(exc))
+                except Exception:
+                    logging.error('Player preference save failed', exc_info=False)
+                    st.error(tr('Could not save your default username. Please try again.'))
+            if st.session_state.pop('player_default_saved', False):
+                st.success(tr('Default username saved. Your current review is unchanged.'))
         if st.button(tr('Sign out'), key='beta_logout'):
             sign_out()
 
@@ -100,6 +118,7 @@ def main():
         accounts.sync()
         token = st.session_state.get('account_token') or browser_session.request_token()
         identity = accounts.identity(token)
+        default_player = accounts.player_username(token) if identity is not None else None
     except Exception:
         logging.error('Account database unavailable', exc_info=False)
         st.error(tr('Account service is temporarily unavailable. Please try again later.'))
@@ -126,7 +145,8 @@ def main():
         clear_private_state()
         browser_session.forget()
         st.rerun()
-    account_menu(identity['username'], sign_out)
+    account_menu(identity['username'], sign_out, default_player,
+                 lambda player: accounts.save_player_username(token, player))
     try:
         from chess_analysis import engine_path
         from beta_store import UserLibrary
@@ -143,7 +163,7 @@ def main():
     def authorized():
         current = accounts.identity(token)
         return current is not None and current['id'] == owner
-    trainer(UserLibrary(store, owner, authorize=authorized), playback_engine=path)
+    trainer(UserLibrary(store, owner, authorize=authorized, default_username=default_player), playback_engine=path)
 
 
 if __name__ == '__main__':

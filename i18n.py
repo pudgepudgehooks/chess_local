@@ -3,6 +3,18 @@ import re
 import streamlit as st
 
 ZH = {
+    'Choose dates and mistake size in the sidebar, then click Start reviewing. Manage your default player in Account, or choose a temporary player in Advanced settings.': '在侧栏选择日期和失误程度，再点击“开始复习”。可在“账号”中管理默认棋手，或在高级设置中临时选择其他棋手。',
+    'Your saved Chess.com username is used automatically. Choose dates and mistake size, then click Start reviewing. To save a different default, open Account. For a temporary Chess.com, Lichess, or PGN player, enable Use a different player for this review in Advanced settings. The temporary choice applies to the selected round and resets after Start reviewing; your next start uses the saved default.': '系统会自动使用账号保存的 Chess.com 用户名。选择日期和失误程度后，点击“开始复习”。要永久修改默认用户名，请打开“账号”。要临时选择 Chess.com、Lichess 或 PGN 棋手，请在高级设置中启用“本轮复习使用其他棋手”。临时选择仅用于所选轮次，点击“开始复习”后重置；下次开始会再次使用保存的默认用户名。',
+    'Default Chess.com username': '默认 Chess.com 用户名',
+    'Default Chess.com username: {username}': '默认 Chess.com 用户名：{username}',
+    'Not set': '未设置',
+    'Saving changes the default for future reviews.': '保存后会用于今后的复习。',
+    'Save default username': '保存默认用户名',
+    'Could not save your default username. Please try again.': '无法保存默认用户名，请重试。',
+    'Default username saved. Your current review is unchanged.': '默认用户名已保存，当前复习不变。',
+    'Use a different player for this review': '本轮复习使用其他棋手',
+    'Applies to this review only. Your saved account default is unchanged.': '仅用于本轮复习，不会更改账号保存的默认用户名。',
+    'Set your default Chess.com username in Account, or use a temporary player in Advanced settings.': '请在“账号”中设置默认 Chess.com 用户名，或在高级设置中临时选择其他棋手。',
     'Back to sign in': '返回登录',
     'Account': '账号',
     'Previous puzzle': '上一题',

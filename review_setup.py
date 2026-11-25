@@ -90,18 +90,32 @@ def prepare_start(library, setup, repository=None, uploaded=None, executable=Non
     return plan
 
 
+def player_inputs(disabled=False):
+    source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'],
+        format_func=lambda value, lang=language(): tr({'Chess.com month': 'Chess.com', 'Lichess month': 'Lichess'}.get(value, value), _language=lang),
+        key='analysis_source', disabled=disabled)
+    username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
+        'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username',
+        on_change=clean_username_input, disabled=disabled,
+        help=tr('This is the chess username whose mistakes you want to review, not your app login.'))
+    return source, username
+
+
 def setup_sidebar(library, repository=None, progress_label=None):
     owner = repository.owner if repository else 'local'
     with st.sidebar:
         st.header(tr('Review setup'))
-        source = st.radio(tr('Game source'), ['Chess.com month', 'Lichess month', 'Upload PGN'],
-            format_func=lambda value, lang=language(): tr({'Chess.com month': 'Chess.com', 'Lichess month': 'Lichess'}.get(value, value), _language=lang), key='analysis_source')
-        st.html('''<style>
-        .st-key-analysis_username [data-testid="InputInstructions"]{display:none}
-        </style>''')
-        username = st.text_input(tr('Your Lichess username' if source == 'Lichess month' else
-            'Player username in PGN' if source == 'Upload PGN' else 'Your Chess.com username'), key='analysis_username', on_change=clean_username_input,
-            help=tr('This is the chess username whose mistakes you want to review, not your app login.'))
+        saved_player = getattr(repository, 'default_username', None)
+        if st.session_state.pop('reset_player_override', False):
+            st.session_state.review_player_override = False
+        if saved_player is not None and not st.session_state.get('review_player_override', False):
+            st.session_state.analysis_source = 'Chess.com month'
+            st.session_state.analysis_username = saved_player
+        st.html("""<style>.st-key-analysis_username [data-testid="InputInstructions"]{display:none}</style>""")
+        if saved_player is None:
+            source, username = player_inputs()
+        elif not saved_player:
+            st.info(tr('Set your default Chess.com username in Account, or use a temporary player in Advanced settings.'))
         start = st.date_input(tr('Start date'), value=date.today().replace(day=1), min_value=date(1900, 1, 1),
                              max_value=date(2200, 12, 31), format='YYYY-MM-DD', key='analysis_start_date')
         end = st.date_input(tr('End date'), value=date.today(), min_value=date(1900, 1, 1),
@@ -117,11 +131,13 @@ def setup_sidebar(library, repository=None, progress_label=None):
             format_func=lambda value, lang=language(): tr(value, _language=lang),
             disabled=bool(st.session_state.get('analysis_use_custom_loss', False)),
             help=tr('A custom minimum loss in Advanced settings overrides this choice.'))
-        uploaded = st.file_uploader(tr('PGN file'), type=['pgn'], key='analysis_upload') if source == 'Upload PGN' else None
-        if source == 'Upload PGN' and uploaded is None:
-            st.caption(tr('Upload the PGN to find new mistakes. Without a file, only matching saved puzzles can be reviewed.'))
         executable = ''
         with st.expander(tr('Advanced settings')):
+            if saved_player is not None:
+                override = st.checkbox(tr('Use a different player for this review'), key='review_player_override',
+                    help=tr('Applies to this review only. Your saved account default is unchanged.'))
+                chosen_source, chosen_username = player_inputs(disabled=not override)
+                source, username = (chosen_source, chosen_username) if override else ('Chess.com month', saved_player)
             due_only = st.checkbox(tr('Only show puzzles due for review'), value=False, key='due_only')
             use_custom_loss = st.checkbox(tr('Use custom minimum loss'), value=False, key='analysis_use_custom_loss',
                 help=tr('When enabled, Low and High are ignored.'))
@@ -134,6 +150,9 @@ def setup_sidebar(library, repository=None, progress_label=None):
             else:
                 executable = st.text_input(tr('Stockfish executable path'), value=os.environ.get('STOCKFISH_PATH', ''), key='analysis_engine')
                 import_limit = st.number_input(tr('Maximum games to fetch'), 1, 100, 100, key='analysis_import_limit')
+        uploaded = st.file_uploader(tr('PGN file'), type=['pgn'], key='analysis_upload') if source == 'Upload PGN' else None
+        if source == 'Upload PGN' and uploaded is None:
+            st.caption(tr('Upload the PGN to find new mistakes. Without a file, only matching saved puzzles can be reviewed.'))
         threshold = custom_loss if use_custom_loss else {'Low': 150, 'High': 300}[level]
         pending = st.session_state.get('pending_review_setup')
         if st.button(tr('Start reviewing'), key='start_review', disabled=not valid or bool(pending), width='stretch'):
@@ -155,6 +174,8 @@ def setup_sidebar(library, repository=None, progress_label=None):
                     st.session_state.pop('analysis_status_job', None)
                     reset_round()
                     st.session_state.next_main_tab = 'Practice'
+                if saved_player is not None:
+                    st.session_state.reset_player_override = True
                 st.rerun()
             except Exception as exc:
                 import logging
