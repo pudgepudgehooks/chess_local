@@ -60,6 +60,13 @@ class BetaGateUITests(unittest.TestCase):
                     self.assertEqual(refreshed.session_state['account_token'], token)
                     self.assertEqual(refreshed.session_state['beta_owner'], app.session_state['beta_owner'])
                     self.assertFalse(any(t.label == 'Username' for t in refreshed.text_input))
+                    legacy = self.app()
+                    legacy.secrets['beta'] = app.secrets['beta']
+                    legacy.session_state.account_token = token
+                    with patch('browser_session.request_token', return_value=None):
+                        legacy.run(timeout=30)
+                    self.assertFalse(legacy.exception)
+                    self.assertEqual(legacy.session_state['_session_cookie_command']['token'], token)
                     app.button(key='beta_logout').click().run()
                     self.assertFalse(app.exception)
                     self.assertTrue(any(t.label == 'Username' for t in app.text_input))

@@ -28,7 +28,7 @@ def services(url, stockfish_path):
 
 def clear_private_state():
     for key in list(st.session_state):
-        if key not in ('ui_language', '_session_cookie_command', '_ignore_browser_session'):
+        if key not in ('ui_language', '_session_cookie_command', '_session_cookie_token_hash', '_ignore_browser_session'):
             del st.session_state[key]
 
 
@@ -92,6 +92,7 @@ def main():
         clear_private_state()
         st.session_state.account_token = token
         st.session_state.beta_owner = owner
+    browser_session.ensure(token)
     browser_session.sync()
     with st.sidebar:
         st.caption(tr('Signed in as {username}', username=identity['username']))
