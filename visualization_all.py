@@ -135,16 +135,17 @@ def trainer(repository, playback_engine, review_tab, library_tab):
     summary = tr('Reviewing {username} · {start} to {end} · Minimum loss: {loss} centipawns',
                  username=setup['username'], start=setup['start'].isoformat(), end=setup['end'].isoformat(), loss=setup['threshold'])
     plan = st.session_state.get('review_plan', {})
-    with review_tab:
-        st.caption(summary)
-        if plan.get('reused'):
-            st.caption(tr('Reused saved analysis for {count} games. No repeat analysis was needed for those games.', count=plan['reused']))
-        if plan.get('selected'):
-            st.caption(tr('Analyzed {count} games for this review.', count=plan['selected']))
-        if plan.get('remaining'):
-            st.info(tr('{count} more fetched games still need analysis. Click Start reviewing again to process the next batch.', count=plan['remaining']))
-        if plan and not plan.get('fetched'):
-            st.info(tr('No games were returned for analysis. Showing any matching saved puzzles.'))
+    if st.session_state.get('review_cycle', {}).get('state') not in ('complete', 'rest'):
+        with review_tab:
+            st.caption(summary)
+            if plan.get('reused'):
+                st.caption(tr('Reused saved analysis for {count} games. No repeat analysis was needed for those games.', count=plan['reused']))
+            if plan.get('selected'):
+                st.caption(tr('Analyzed {count} games for this review.', count=plan['selected']))
+            if plan.get('remaining'):
+                st.info(tr('{count} more fetched games still need analysis. Click Start reviewing again to process the next batch.', count=plan['remaining']))
+            if plan and not plan.get('fetched'):
+                st.info(tr('No games were returned for analysis. Showing any matching saved puzzles.'))
     available = filter_library(library, setup)
     due_only = setup['due_only']
     with library_tab:
