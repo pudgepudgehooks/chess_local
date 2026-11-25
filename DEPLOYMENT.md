@@ -37,8 +37,8 @@ The placeholders above are not working hashes. Start with one real account and a
 ## Login, password resets, and access changes
 
 - Visitors see only **Username**, **Password**, and **Sign in**. Each account has a separate private puzzle library and review history in PostgreSQL.
-- Sessions expire after 12 hours. Tokens stay in server-side Streamlit state and are stored hashed in PostgreSQL; they never appear in URLs, browser local storage or application configuration.
-- A full browser refresh/reconnection or app restart may require signing in again. Puzzle progress persists. Logout revokes the current session. There is no persistent “remember me” cookie.
+- Sessions expire after 12 hours. A host-only `Secure`, `SameSite=Strict` cookie restores the session after a browser refresh, reconnection, or app restart. PostgreSQL stores only the token hash. Tokens never appear in URLs, browser local storage, or application configuration.
+- The cookie is written by the app's local browser component, so it cannot be `HttpOnly`; deploy the beta over HTTPS and keep third-party scripts out of the app. Signing out revokes the server session and removes the cookie. Expired sessions, password resets, and account removal require signing in again. Puzzle progress persists.
 - To reset a password, rerun `python account_admin.py alice` and replace Alice's hash in Secrets. Save/reboot. Existing sessions are revoked; the user's stable internal ID and puzzles are retained.
 - To remove access, delete that user's entire `[beta.accounts.username]` section, save and reboot. Sessions are revoked, but their database records and puzzles are retained. Re-adding the same username restores their library, so do not recycle usernames for different people.
 - There is no email or self-service password recovery. The group owner assigns replacement passwords.

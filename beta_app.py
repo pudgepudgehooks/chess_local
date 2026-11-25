@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import streamlit as st
 from i18n import tr, language_selector, error_text
+import browser_session
 
 
 @st.cache_resource
@@ -27,7 +28,7 @@ def services(url, stockfish_path):
 
 def clear_private_state():
     for key in list(st.session_state):
-        if key != 'ui_language':
+        if key not in ('ui_language', '_session_cookie_command', '_ignore_browser_session'):
             del st.session_state[key]
 
 
@@ -44,6 +45,7 @@ def account_screen(accounts):
             token = accounts.login(username, password, st.context.ip_address or 'unknown')
             clear_private_state()
             st.session_state.account_token = token
+            browser_session.remember(token)
             st.rerun()
         except ValueError as exc:
             st.error(error_text(exc))
@@ -69,29 +71,34 @@ def main():
     try:
         accounts = account_service(url, tuple(sorted(configured.items())))
         accounts.sync()
-        identity = accounts.identity(st.session_state.get('account_token'))
+        token = st.session_state.get('account_token') or browser_session.request_token()
+        identity = accounts.identity(token)
     except Exception:
         logging.error('Account database unavailable', exc_info=False)
         st.error(tr('Account service is temporarily unavailable. Please try again later.'))
         st.stop()
     if identity is None:
-        if st.session_state.get('account_token'):
+        if token:
             clear_private_state()
+            browser_session.forget()
             st.info(tr('Your session expired. Please sign in again.'))
+        browser_session.sync()
         account_screen(accounts)
         st.stop()
     owner = identity['id']
+    st.session_state.account_token = token
     if st.session_state.get('beta_owner') != owner:
         token = st.session_state.account_token
         clear_private_state()
         st.session_state.account_token = token
         st.session_state.beta_owner = owner
+    browser_session.sync()
     with st.sidebar:
         st.caption(tr('Signed in as {username}', username=identity['username']))
-        st.caption(tr('Signed in for up to 12 hours. A full page refresh requires signing in again.'))
         if st.button(tr('Sign out'), key='beta_logout'):
             accounts.logout(st.session_state.account_token)
             clear_private_state()
+            browser_session.forget()
             st.rerun()
     try:
         from chess_analysis import engine_path

@@ -49,6 +49,17 @@ class BetaGateUITests(unittest.TestCase):
                     self.assertTrue(any('click Start reviewing' in item.value for item in app.info))
                     self.assertFalse(any(t.label == 'Stockfish executable path' for t in app.text_input))
                     token = app.session_state['account_token']
+                    self.assertEqual(app.session_state['_session_cookie_command']['token'], token)
+                    self.assertFalse(any('A full page refresh requires' in item.value for item in app.caption))
+                    # A new AppTest has no Streamlit session state, like a browser refresh.
+                    refreshed = self.app()
+                    refreshed.secrets['beta'] = app.secrets['beta']
+                    with patch('browser_session.request_token', return_value=token):
+                        refreshed.run(timeout=30)
+                    self.assertFalse(refreshed.exception)
+                    self.assertEqual(refreshed.session_state['account_token'], token)
+                    self.assertEqual(refreshed.session_state['beta_owner'], app.session_state['beta_owner'])
+                    self.assertFalse(any(t.label == 'Username' for t in refreshed.text_input))
                     app.button(key='beta_logout').click().run()
                     self.assertFalse(app.exception)
                     self.assertTrue(any(t.label == 'Username' for t in app.text_input))
@@ -56,5 +67,13 @@ class BetaGateUITests(unittest.TestCase):
                     from beta_auth import Accounts
                     accounts = Accounts(store.engine, {'alice': app.secrets['beta']['accounts']['alice']['password_hash']})
                     self.assertIsNone(accounts.identity(token))
+                    self.assertEqual(app.session_state['_session_cookie_command']['max_age'], 0)
+                    revoked = self.app()
+                    revoked.secrets['beta'] = app.secrets['beta']
+                    with patch('browser_session.request_token', return_value=token):
+                        revoked.run(timeout=30)
+                    self.assertFalse(revoked.exception)
+                    self.assertTrue(any(t.label == 'Username' for t in revoked.text_input))
+                    self.assertEqual(revoked.session_state['_session_cookie_command']['max_age'], 0)
             finally:
                 store.engine.dispose()

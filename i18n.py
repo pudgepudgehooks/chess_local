@@ -3,6 +3,7 @@ import re
 import streamlit as st
 
 ZH = {
+    'Your browser blocked the sign-in cookie. Allow cookies for this app to stay signed in after refreshing.': '浏览器阻止了登录 Cookie。请允许此应用使用 Cookie，以便刷新后保持登录。',
     'Previous': '上一页',
     'Next': '下一页',
     'Current page: {page}': '当前第 {page} 页',
@@ -129,7 +130,7 @@ ZH = {
     'Online beta and your saved library': '在线内测与已保存题库',
     'Sign in with the username and password assigned by the app administrator. Each app account has its own saved puzzle library and review history. Entering a chess username chooses which player to analyze; it does not verify that you own that chess account.': '使用管理员分配的用户名和密码登录。每个应用账号拥有独立的题库和复习记录。输入棋谱用户名只是选择要分析的棋手，并不会验证该棋类平台账号是否属于你。',
     'Analysis runs in the background. After it finishes, click Update puzzle library to load the new puzzles and start a new cycle with your current filters. This does not reanalyze games or delete puzzles. Old completion messages stay hidden when you sign in.': '分析在后台运行。完成后点击“更新题库”，即可加载新题，并按当前筛选条件开始新一轮练习。此操作不会重新分析棋谱或删除题目。登录时不会显示历史分析完成提示。',
-    'You can stay signed in for up to 12 hours. A full browser refresh requires signing in again, but your saved puzzles and review history remain.': '登录会话最长持续 12 小时。完全刷新浏览器页面后需要重新登录，但已保存的题目和复习记录会保留。',
+    'Refreshing the page keeps you signed in while your session is valid. Sessions expire after 12 hours. Signing out, a password reset, or account removal ends the session. Your saved puzzles and review history remain.': '会话有效时，刷新页面仍会保持登录。会话在 12 小时后到期。退出登录、重置密码或移除账号会使会话失效。已保存的题目和复习记录会保留。',
     'Local setup and storage': '本地设置与保存',
     'Set Stockfish executable path to the Stockfish program on your computer. Local analysis runs while this app is open. Lichess imports up to the Maximum games to import setting; Chess.com imports standard games from the selected month.': '将 Stockfish 可执行文件路径设为电脑上 Stockfish 程序的位置。本地分析在应用运行期间执行。Lichess 最多导入“最多导入局数”设定的数量；Chess.com 导入所选月份的标准对局。',
     'The local app saves puzzles and review history in puzzles.json. Imported samples may have an unknown owner or date. Back up that file to keep your local progress.': '本地应用将题目和复习记录保存在 puzzles.json 中。导入的示例题可能没有明确的用户名或日期。请备份该文件以保留本地进度。',
@@ -169,7 +170,6 @@ ZH = {
     'I saved my recovery code': '我已保存恢复码',
     'Account service is temporarily unavailable. Please try again later.': '账号服务暂时不可用，请稍后重试。',
     'Your session expired. Please sign in again.': '登录会话已过期，请重新登录。',
-    'Signed in for up to 12 hours. A full page refresh requires signing in again.': '登录最长有效 12 小时。完全刷新页面后需要重新登录。',
     'Use 3–32 letters, numbers, underscores or hyphens for your username.': '用户名须为 3–32 个字母、数字、下划线或连字符。',
     'Use a password with 12–128 characters.': '请使用长度为 12–128 个字符的密码。',
     'Invalid or already used invitation code.': '邀请码无效或已被使用。',

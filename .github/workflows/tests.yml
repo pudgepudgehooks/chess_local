@@ -30,3 +30,4 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/board_state.test.cjs
+      - run: node tests/session_cookie.test.cjs
