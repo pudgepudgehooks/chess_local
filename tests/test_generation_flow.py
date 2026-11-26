@@ -110,7 +110,7 @@ class GenerationTests(unittest.TestCase):
                     app.run()
                     self.assertFalse(app.exception)
                     self.assertEqual(app.session_state['analysis_library_loaded_job'], ('alice', job['id']))
-                    self.assertTrue(any(b.key == 'open-puzzle-first' for b in app.button))
+                    self.assertFalse(any(b.key == 'open-puzzle-first' for b in app.button))
                     self.assertFalse(any(b.key == 'refresh_library' for b in app.button))
                     self.assertEqual(app.session_state['review_cycle']['ids'], ['first'])
                     token = app.session_state['review_cycle']['token']

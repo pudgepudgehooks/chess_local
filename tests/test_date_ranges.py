@@ -77,7 +77,8 @@ class DateRangeUITests(unittest.TestCase):
             played='h2h3', best_move='e2e4', accepted_moves=['e2e4'],
             solution=['e2e4', 'e7e5'], loss=300) for i, day in enumerate(dates)]}
         original = deepcopy(library)
-        with patch('visualization_all.load_library', return_value=library), \
+        with patch('visualization_all.SHOW_MISTAKE_LIBRARY', True), \
+             patch('visualization_all.load_library', return_value=library), \
              patch('puzzle_store.save_library') as save, \
              patch('visualization_all.drag_board', return_value=None):
             app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run(timeout=30)

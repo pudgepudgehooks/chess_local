@@ -80,6 +80,7 @@ def job_status(repository):
         st.write(job_message(job['message']))
 
 TAB_NAMES = ['Practice', 'Mistake library']
+SHOW_MISTAKE_LIBRARY = False
 
 
 def remember_main_tab():
@@ -100,10 +101,13 @@ def main(repository=None, playback_engine=None):
         trainer(repository, playback_engine, None, None, guide_page=True)
         return
     name = st.session_state.pop('next_main_tab', st.session_state.get('main_tab_name', 'Practice'))
+    if not SHOW_MISTAKE_LIBRARY:
+        name = 'Practice'
     st.session_state.main_tab_name = name
     st.session_state.main_tab = tr(name)
-    review_tab, library_tab = st.tabs(
-        [tr(name) for name in TAB_NAMES], key='main_tab', on_change=remember_main_tab)
+    tabs = st.tabs([tr(name) for name in (TAB_NAMES if SHOW_MISTAKE_LIBRARY else ['Practice'])],
+                   key='main_tab', on_change=remember_main_tab)
+    review_tab, library_tab = tabs[0], tabs[1] if SHOW_MISTAKE_LIBRARY else None
     trainer(repository, playback_engine, review_tab, library_tab)
 
 
@@ -131,12 +135,14 @@ def trainer(repository, playback_engine, review_tab, library_tab, guide_page=Fal
     if st.session_state.get('pending_review_setup'):
         with review_tab:
             st.info(tr('Analyzing your selected games. Your review will open automatically when ready.'))
-        with library_tab:
-            st.info(tr('Preparing your selected library. Please wait for analysis to finish.'))
+        if library_tab is not None:
+            with library_tab:
+                st.info(tr('Preparing your selected library. Please wait for analysis to finish.'))
         return
     if setup is None:
-        with library_tab:
-            st.info(tr('Click Start reviewing in the sidebar to choose which saved puzzles to browse.'))
+        if library_tab is not None:
+            with library_tab:
+                st.info(tr('Click Start reviewing in the sidebar to choose which saved puzzles to browse.'))
         return
     plan = st.session_state.get('review_plan', {})
     if st.session_state.get('review_cycle', {}).get('state') not in ('complete', 'rest'):
@@ -149,18 +155,19 @@ def trainer(repository, playback_engine, review_tab, library_tab, guide_page=Fal
                 st.info(tr('No games were returned for analysis. Showing any matching saved puzzles.'))
     available = filter_library(library, setup)
     due_only = setup['due_only']
-    with library_tab:
-        candidates = [p for p in available.values() if not due_only or is_due(p)]
-        selected = show_library(candidates)
-        if selected is not None:
-            ids = [p['id'] for p in candidates]
-            index = ids.index(selected)
-            st.session_state.review_cycle = {'ids': ids[index:] + ids[:index], 'index': 0,
-                                             'state': 'active', 'token': uuid.uuid4().hex}
-            st.session_state.active_id = selected
-            st.session_state.pop('board_feedback', None)
-            st.session_state.next_main_tab = 'Practice'
-            st.rerun()
+    if library_tab is not None:
+        with library_tab:
+            candidates = [p for p in available.values() if not due_only or is_due(p)]
+            selected = show_library(candidates)
+            if selected is not None:
+                ids = [p['id'] for p in candidates]
+                index = ids.index(selected)
+                st.session_state.review_cycle = {'ids': ids[index:] + ids[:index], 'index': 0,
+                                                 'state': 'active', 'token': uuid.uuid4().hex}
+                st.session_state.active_id = selected
+                st.session_state.pop('board_feedback', None)
+                st.session_state.next_main_tab = 'Practice'
+                st.rerun()
     with review_tab:
         practice_puzzles(library, repository, playback_engine, list(library['puzzles']), available, due_only)
 

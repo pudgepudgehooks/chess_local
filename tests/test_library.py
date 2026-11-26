@@ -20,9 +20,32 @@ def fixture_library(count=18):
 
 
 class LibraryUITests(unittest.TestCase):
+    def setUp(self):
+        visible = patch('visualization_all.SHOW_MISTAKE_LIBRARY', True)
+        visible.start()
+        self.addCleanup(visible.stop)
+
+    def test_hidden_library_keeps_practice_and_saved_data(self):
+        library = fixture_library()
+        before = deepcopy(library)
+        with patch('visualization_all.SHOW_MISTAKE_LIBRARY', False), \
+             patch('visualization_all.load_library', return_value=library), \
+             patch('visualization_all.save_library') as save, \
+             patch('visualization_all.drag_board', return_value=None):
+            app = self.app(library)
+            app.session_state.main_tab_name = 'Mistake library'
+            app.run(timeout=30)
+            self.assertFalse(app.exception)
+            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['Practice'])
+            self.assertEqual(app.session_state['main_tab_name'], 'Practice')
+            self.assertFalse(self.open_ids(app))
+            self.assertTrue(app.button(key='next_puzzle'))
+            self.assertEqual(library, before)
+            save.assert_not_called()
+
     def app(self, library):
         from streamlit.testing.v1 import AppTest
-        return seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library, username='alice')
+        return seed_review(AppTest.from_string('from visualization_all import main\nmain()'), library, username='alice')
 
     def open_ids(self, app):
         return [b.key for b in app.button if b.key and b.key.startswith('open-puzzle-')]
@@ -31,9 +54,9 @@ class LibraryUITests(unittest.TestCase):
         library = fixture_library()
         record_review(library['puzzles'][1], True)
         before = deepcopy(library)
-        with patch('puzzle_store.load_library', return_value=library), \
-             patch('puzzle_store.save_library') as save, \
-             patch('drag_board.drag_board', return_value=None) as board:
+        with patch('visualization_all.load_library', return_value=library), \
+             patch('visualization_all.save_library') as save, \
+             patch('visualization_all.drag_board', return_value=None) as board:
             app = self.app(library).run(timeout=30)
             self.assertFalse(app.exception)
             self.assertNotIn('open-puzzle-p1', self.open_ids(app), 'due-only hides scheduled puzzles')
@@ -70,9 +93,9 @@ class LibraryUITests(unittest.TestCase):
 
     def test_filters_reset_pagination_and_language_keeps_library_tab(self):
         library = fixture_library()
-        with patch('puzzle_store.load_library', return_value=library), \
-             patch('puzzle_store.save_library') as save, \
-             patch('drag_board.drag_board', return_value=None):
+        with patch('visualization_all.load_library', return_value=library), \
+             patch('visualization_all.save_library') as save, \
+             patch('visualization_all.drag_board', return_value=None):
             app = self.app(library).run(timeout=30)
             app.button(key='library-top-page-2').click().run()
             choose_review(app, 'alice', date(2026, 8, 1), date(2026, 8, 31), threshold=300)

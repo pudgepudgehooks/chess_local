@@ -17,7 +17,7 @@ class GuideUITests(unittest.TestCase):
              patch('drag_board.drag_board', return_value=None):
             app = seed_review(AppTest.from_file(str(Path(__file__).resolve().parents[1] / 'visualization_all.py')), library).run(timeout=30)
             self.assertFalse(app.exception)
-            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['Practice', 'Mistake library'])
+            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['Practice'])
             app.checkbox(key='analysis_use_custom_loss').check().run()
             app.number_input(key='analysis_threshold').set_value(300).run()
             app.button(key='next_puzzle').click().run()
@@ -25,7 +25,7 @@ class GuideUITests(unittest.TestCase):
             token = app.session_state['review_cycle']['token']
             app.button(key='language_toggle').click().run()
             self.assertFalse(app.exception)
-            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['练习', '错题库'])
+            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['练习'])
             self.assertEqual(app.session_state['active_id'], active)
             self.assertEqual(app.session_state['review_cycle']['token'], token)
             self.assertEqual(app.number_input(key='analysis_threshold').value, 300)
