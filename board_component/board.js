@@ -190,6 +190,8 @@ window.addEventListener('message', e => {
     renderedFen=null;
   }
   args=incoming;
+  if (e.data.theme?.backgroundColor) document.documentElement.style.setProperty('--button-background', e.data.theme.backgroundColor);
+  if (e.data.theme?.primaryColor) document.documentElement.style.setProperty('--button-primary', e.data.theme.primaryColor);
   if (e.data.theme?.textColor) document.documentElement.style.setProperty('--app-text', e.data.theme.textColor);
   for (const [name, variable] of Object.entries({
     'square light':'--board-light', 'square dark':'--board-dark', 'margin':'--board-border',

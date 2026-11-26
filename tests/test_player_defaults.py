@@ -18,15 +18,23 @@ class PlayerDefaultTests(unittest.TestCase):
                 expected = {'deer': 'timberrrrrrrr', 'bear': 'ursabearattack', 'coco': 'mimiyamg'}
                 for name, player in expected.items():
                     self.assertEqual(accounts.player_username(tokens[name]), player)
+                self.assertEqual(accounts.board_palette(tokens['deer']), 'Brown')
+                accounts.save_board_palette(tokens['deer'], 'Blue')
+                self.assertEqual(accounts.board_palette(tokens['bear']), 'Brown')
                 self.assertEqual(accounts.save_player_username(tokens['deer'], ' OtherPlayer '), 'OtherPlayer')
                 reloaded = Accounts(store.engine, configured)
                 self.assertEqual(reloaded.player_username(tokens['deer']), 'OtherPlayer')
+                self.assertEqual(reloaded.board_palette(tokens['deer']), 'Blue')
+                with self.assertRaises(ValueError):
+                    reloaded.save_board_palette(tokens['deer'], 'invalid')
                 self.assertEqual(reloaded.player_username(tokens['bear']), expected['bear'])
                 with self.assertRaises(ValueError):
                     reloaded.save_player_username(tokens['deer'], 'invalid name!')
                 reloaded.logout(tokens['deer'])
                 with self.assertRaises(ValueError):
                     reloaded.save_player_username(tokens['deer'], 'AnotherPlayer')
+                with self.assertRaises(ValueError):
+                    reloaded.save_board_palette(tokens['deer'], 'Purple')
             finally:
                 store.engine.dispose()
 

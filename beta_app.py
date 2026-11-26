@@ -66,7 +66,7 @@ def account_screen(accounts):
             st.error(tr('Account service is temporarily unavailable. Please try again later.'))
 
 
-def account_menu(username, sign_out, default_player=None, save_player=None):
+def account_menu(username, sign_out, default_player=None, save_player=None, palette='Brown', save_palette=None):
     st.html('''<style>
     [data-testid="stToolbarActions"]{padding-inline-start:13rem}
     .st-key-account_menu{position:fixed;top:3.75rem;right:6.25rem;width:7rem;z-index:1000002}
@@ -95,6 +95,21 @@ def account_menu(username, sign_out, default_player=None, save_player=None):
                     st.error(tr('Could not save your default username. Please try again.'))
             if st.session_state.pop('player_default_saved', False):
                 st.success(tr('Default username saved. Your current review is unchanged.'))
+        if save_palette is not None:
+            from board_theme import PALETTES
+            with st.form('save_board_color'):
+                selected_palette = st.selectbox(tr('Board color'), list(PALETTES),
+                    index=list(PALETTES).index(palette), format_func=tr, key='account_board_palette')
+                save_color = st.form_submit_button(tr('Save board color'))
+            if save_color:
+                try:
+                    save_palette(selected_palette)
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(error_text(exc))
+                except Exception:
+                    logging.error('Board preference save failed', exc_info=False)
+                    st.error(tr('Could not save your board color. Please try again.'))
         if st.button(tr('Sign out'), key='beta_logout'):
             sign_out()
 
@@ -119,6 +134,7 @@ def main():
         token = st.session_state.get('account_token') or browser_session.request_token()
         identity = accounts.identity(token)
         default_player = accounts.player_username(token) if identity is not None else None
+        palette = accounts.board_palette(token) if identity is not None else 'Brown'
     except Exception:
         logging.error('Account database unavailable', exc_info=False)
         st.error(tr('Account service is temporarily unavailable. Please try again later.'))
@@ -140,13 +156,15 @@ def main():
         st.session_state.beta_owner = owner
     browser_session.ensure(token)
     browser_session.sync()
+    st.session_state.board_palette = palette
     def sign_out():
         accounts.logout(st.session_state.account_token)
         clear_private_state()
         browser_session.forget()
         st.rerun()
     account_menu(identity['username'], sign_out, default_player,
-                 lambda player: accounts.save_player_username(token, player))
+                 lambda player: accounts.save_player_username(token, player), palette,
+                 lambda color: accounts.save_board_palette(token, color))
     try:
         from chess_analysis import engine_path
         from beta_store import UserLibrary

@@ -75,8 +75,18 @@ with patch('visualization_all.load_library', return_value=st.session_state.previ
         def save_preview_player(player):
             from player_names import normalize_player_username
             st.session_state.preview_default_player = normalize_player_username(player)
-        account_menu('Preview account', lambda: st.info('Preview account only.'), saved, save_preview_player)
+        palette = st.session_state.setdefault('preview_palette', 'Brown')
+        st.session_state.board_palette = palette
+        def save_preview_palette(value):
+            st.session_state.preview_palette = value
+        def review_preview(puzzle, correct, event):
+            from puzzle_store import record_review
+            record_review(puzzle, correct)
+            return puzzle
+        account_menu('Preview account', lambda: st.info('Preview account only.'), saved, save_preview_player,
+                     palette, save_preview_palette)
         repository = SimpleNamespace(owner='preview', default_username=saved,
+            review=review_preview,
             load=lambda: st.session_state.preview_library, recent_jobs=lambda: [],
             prepare_analysis=lambda *args: dict(job_id=None, fetched=6, reused=6, selected=0))
     else:

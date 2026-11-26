@@ -191,7 +191,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         st.session_state.active_id = None
         st.success(tr('Cycle complete! Take a rest or practice your mistakes again.'))
         st.caption(tr('Or choose another date range in the sidebar and click Start reviewing.'))
-        if st.button(tr('Previous puzzle'), key='previous_puzzle'):
+        if st.button(tr('Previous'), key='previous_puzzle'):
             cycle['state'] = 'active'
             cycle['index'] = len(puzzles) - 1
             st.session_state.pop('board_feedback', None)
@@ -320,7 +320,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         cycle['index'] = max(0, index - 1)
         st.session_state.pop('board_feedback', None)
     with st.container(horizontal=True, gap='small', width=460):
-        st.button(tr('Previous puzzle'), key='previous_puzzle', disabled=index == 0, on_click=previous_puzzle)
-        st.button(tr('Next puzzle'), key='next_puzzle', on_click=next_puzzle)
+        st.button(tr('Previous'), key='previous_puzzle', disabled=index == 0, on_click=previous_puzzle)
+        st.button(tr('Next'), key='next_puzzle', on_click=next_puzzle)
 if __name__ == '__main__':
     main()

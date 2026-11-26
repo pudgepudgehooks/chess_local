@@ -6,7 +6,7 @@ import chess.svg
 import chess.engine
 from streamlit.components.v1 import declare_component
 from i18n import tr, language
-from board_theme import BOARD_COLORS
+from board_theme import current_board_colors
 
 _component = declare_component('chess_drag_board', path=str(Path(__file__).parent / 'board_component'))
 
@@ -66,7 +66,7 @@ def drag_board(board, key, response=None, context_id=None, hint_square=None):
     return _component(
         fen=board.fen(), white=board.turn == chess.WHITE,
         response=response, context_id=context_id, hint_square=hint_square,
-        previews=prepared['previews'], colors=BOARD_COLORS,
+        previews=prepared['previews'], colors=current_board_colors(),
         assets={chess.Piece(piece, color).symbol(): {
             'svg': piece_svg(chess.Piece(piece, color).symbol()),
             'label': f"{tr('White' if color else 'Black')} {tr(chess.piece_name(piece))}",

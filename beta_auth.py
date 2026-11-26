@@ -27,6 +27,8 @@ player_preferences = Table('beta_player_preferences', metadata,
     Column('owner', String(64), primary_key=True),
     Column('chesscom_username', String(50), nullable=False))
 INITIAL_PLAYERS = {'deer': 'timberrrrrrrr', 'bear': 'ursabearattack', 'coco': 'mimiyamg'}
+board_preferences = Table('beta_board_preferences', metadata,
+    Column('owner', String(64), primary_key=True), Column('palette', String(20), nullable=False))
 PASSWORDS = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
 DUMMY_HASH = PASSWORDS.hash(secrets.token_urlsafe(32))
 SESSION_SECONDS = 12 * 3600
@@ -176,3 +178,29 @@ class Accounts:
             else:
                 db.execute(player_preferences.insert().values(owner=owner, chesscom_username=username))
         return username
+
+    def board_palette(self, token):
+        identity = self.identity(token)
+        if identity is None:
+            raise ValueError('Your session expired. Please sign in again.')
+        with self.engine.connect() as db:
+            return db.execute(select(board_preferences.c.palette).where(
+                board_preferences.c.owner == identity['id'])).scalar_one_or_none() or 'Brown'
+
+    def save_board_palette(self, token, palette):
+        from board_theme import PALETTES
+        if palette not in PALETTES:
+            raise ValueError('Choose a valid board color.')
+        if not isinstance(token, str) or not 20 <= len(token) <= 128:
+            raise ValueError('Your session expired. Please sign in again.')
+        with self.engine.begin() as db:
+            self._lock(db)
+            row = db.execute(select(users.c.id, users.c.username).join(sessions, users.c.id == sessions.c.owner).where(
+                sessions.c.token_hash == digest(token), sessions.c.expires > time.time())).mappings().first()
+            if row is None or row['username'] not in self.configured:
+                raise ValueError('Your session expired. Please sign in again.')
+            if db.execute(select(board_preferences.c.owner).where(board_preferences.c.owner == row['id'])).first():
+                db.execute(update(board_preferences).where(board_preferences.c.owner == row['id']).values(palette=palette))
+            else:
+                db.execute(board_preferences.insert().values(owner=row['id'], palette=palette))
+        return palette

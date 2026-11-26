@@ -39,10 +39,10 @@ SECTIONS = [
         'An accepted alternative counts as correct and receives the same review schedule as the best move. Feedback identifies it as a good alternative and shows the engine\'s top choice. The continuation follows your move. This is based on engine evaluation, not a judgment of how easy a move is for a human to play.',
         'Mate positions use a separate rule: an alternative must have the same engine mate score as the best move. Older puzzles may only have the best move saved; missing alternatives require a fresh analysis and are not added just by reviewing the puzzle.',
         'An incorrect move stays on the board with a red cross. Click the red retry button below the board to restore the original position and clear the feedback before trying again. Resetting does not record another attempt. After a correct answer, the piece stays where you moved it with a green check. Click Forward or Back to move through the continuation one step at a time. Back can return to the original position. Nothing plays automatically, and navigating the line does not record more attempts.',
-        'Hint highlights the piece to move on the board. The highlight clears when you make a move. Reveal solution and original mistake shows your original move, the engine line, and the evaluation change. Open original game is available when a game link was saved. Click Next puzzle when ready to continue.',
+        'Hint highlights the piece to move on the board. The highlight clears when you make a move. Reveal solution and original mistake shows your original move, the engine line, and the evaluation change. Open original game is available when a game link was saved. Click Next when ready to continue.',
     ]),
     ('Finish a cycle or take a break', [
-        'Each new review starts in a shuffled order and visits each puzzle in your applied selection once. After the last puzzle, click Next puzzle to take a rest or repeat the round in shuffled order. To review other dates or settings, edit the sidebar and click Start reviewing.',
+        'Each new review starts in a shuffled order and visits each puzzle in your applied selection once. After the last puzzle, click Next to take a rest or repeat the round in shuffled order. To review other dates or settings, edit the sidebar and click Start reviewing.',
         'Starting over repeats the same round in a randomized order, including puzzles scheduled for later. Saved review progress is kept. It repeats all puzzles in that round, not only those answered incorrectly.',
     ]),
     ('Understand review scheduling', [
@@ -68,6 +68,7 @@ def show_guide(online=False, show_title=True):
             st.write(tr(paragraph))
     if online:
         st.subheader(tr('Online beta and your saved library'))
+        st.write(tr('Choose Board color under Account and click Save board color. Brown, Green, Blue, and Purple are available. Your choice is saved to your account and applies to Practice and Mistake library without changing your current review. Use Previous and Next to browse puzzles; Previous is disabled on the first puzzle.'))
         st.write(tr('Sign in with the username and password assigned by the app administrator. Each app account has its own saved puzzle library and review history. Entering a chess username chooses which player to analyze; it does not verify that you own that chess account.'))
         st.write(tr('The beta fetches up to 100 recent games and analyzes all uncovered games from that selection in one request, with no daily analysis quota. Already covered games are skipped. The existing ten-minute analysis deadline still applies; if a large selection times out, narrow the dates. A wide range does not guarantee every game has been fetched; narrow the dates to reach older games.'))
         st.write(tr('If analysis is needed, the review opens automatically after it finishes and saves successfully. Fully covered games open without a new analysis job. Failed analysis is not marked reusable, and the previous applied selection remains available. Repeated analysis updates existing puzzles without adding copies or replacing review history.'))

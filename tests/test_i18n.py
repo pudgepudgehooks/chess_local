@@ -40,7 +40,7 @@ class LanguageTests(unittest.TestCase):
             self.assertEqual(app.query_params['lang'], 'zh')
             self.assertEqual(app.radio(key='analysis_loss_level').value, 'Low')
             self.assertTrue(app.radio(key='analysis_loss_level').proto.set_value)
-            self.assertEqual(app.button(key='next_puzzle').label, '下一题')
+            self.assertEqual(app.button(key='next_puzzle').label, '下一页')
             app.button(key='language_toggle').click().run()
             self.assertEqual(app.title[0].value, 'Chess Mistake Trainer')
             self.assertEqual(app.session_state['active_id'], active)
