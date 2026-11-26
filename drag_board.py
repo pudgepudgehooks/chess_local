@@ -61,11 +61,19 @@ def prepare_board(fen):
     return {'previews': previews, 'legal': list(previews)}
 
 
-def drag_board(board, key, response=None, context_id=None, hint_square=None):
+def drag_board(board, key, response=None, context_id=None, hint_square=None, game_url=''):
     prepared = prepare_board(board.fen())
+    from urllib.parse import urlsplit
+    import streamlit as st
+    try:
+        parsed = urlsplit(game_url)
+        safe_url = game_url if parsed.scheme in ('https', 'http') and parsed.netloc else ''
+    except (ValueError, TypeError):
+        safe_url = ''
     return _component(
         fen=board.fen(), white=board.turn == chess.WHITE,
         response=response, context_id=context_id, hint_square=hint_square,
+        game_url=safe_url, sound_enabled=st.session_state.get('sound_enabled', True),
         previews=prepared['previews'], colors=current_board_colors(),
         assets={chess.Piece(piece, color).symbol(): {
             'svg': piece_svg(chess.Piece(piece, color).symbol()),
@@ -77,6 +85,7 @@ def drag_board(board, key, response=None, context_id=None, hint_square=None):
             'Correct answer', 'Incorrect answer',
             'Try again', 'Reset the board and try again',
             'Hint',
+            'Open original game',
             'Move submitted. See the result below the board.', 'Illegal move. Try another destination.',
             'Promote to:', 'Queen', 'Rook', 'Bishop', 'Knight', 'Cancel', 'Choose your promotion piece.',
             'Checking move…', 'The answer is incorrect, please try again',

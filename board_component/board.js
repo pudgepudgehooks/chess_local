@@ -4,6 +4,7 @@ const ghost = document.getElementById('ghost'), promotion = document.getElementB
 const navigation = document.getElementById('continuation'), back = document.getElementById('back'), forward = document.getElementById('forward');
 const retry = document.getElementById('retry');
 const hint = document.getElementById('hint');
+const originalGame = document.getElementById('original-game');
 let args = null, session = null, selected = null, drag = null, suppressClick = false;
 let renderedFen = null, renderedWhite = null;
 const send = (type, data={}) => window.parent.postMessage({isStreamlitMessage:true, type, ...data}, '*');
@@ -94,6 +95,11 @@ function render({animate=true, drop=null}={}) {
   hint.querySelector('span').textContent = t('Hint');
   hint.setAttribute('aria-label', t('Hint'));
   hint.disabled = session.busy || session.solved || session.retryRequired;
+  originalGame.hidden = !args.game_url;
+  if (args.game_url) originalGame.href = args.game_url;
+  else originalGame.removeAttribute('href');
+  originalGame.setAttribute('aria-label', t('Open original game'));
+  originalGame.title = t('Open original game');
   back.disabled = session.index < 0;
   forward.disabled = session.index >= session.frames.length - 1;
   back.setAttribute('aria-label', t('Back')); back.title = t('Back');
@@ -190,6 +196,7 @@ window.addEventListener('message', e => {
     renderedFen=null;
   }
   args=incoming;
+  ChessMoveSound.setEnabled(args.sound_enabled !== false);
   if (e.data.theme?.backgroundColor) document.documentElement.style.setProperty('--button-background', e.data.theme.backgroundColor);
   if (e.data.theme?.primaryColor) document.documentElement.style.setProperty('--button-primary', e.data.theme.primaryColor);
   if (e.data.theme?.textColor) document.documentElement.style.setProperty('--app-text', e.data.theme.textColor);

@@ -5,6 +5,16 @@ import chess
 
 @unittest.skipUnless(importlib.util.find_spec('streamlit'), 'Streamlit is not installed')
 class DragBoardTests(unittest.TestCase):
+    def test_original_game_link_and_muted_component_settings(self):
+        from unittest.mock import patch
+        from drag_board import drag_board
+        with patch('streamlit.session_state', {'sound_enabled': False}), patch('drag_board._component') as component:
+            drag_board(chess.Board(), 'test', game_url='https://www.chess.com/game/live/123')
+            self.assertEqual(component.call_args.kwargs['game_url'], 'https://www.chess.com/game/live/123')
+            self.assertFalse(component.call_args.kwargs['sound_enabled'])
+            drag_board(chess.Board(), 'test', game_url='javascript:alert(1)')
+            self.assertEqual(component.call_args.kwargs['game_url'], '')
+
     def test_preloaded_positions_reuse_legal_previews(self):
         from drag_board import prepare_board
         prepare_board.cache_clear()

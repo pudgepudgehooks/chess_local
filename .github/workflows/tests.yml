@@ -31,3 +31,4 @@ jobs:
           node-version: '22'
       - run: node tests/board_state.test.cjs
       - run: node tests/session_cookie.test.cjs
+      - run: node tests/move_sound.test.cjs

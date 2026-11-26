@@ -59,6 +59,7 @@ def show_guide(online=False, show_title=True):
     if show_title:
         st.header(tr('How it works'))
     st.write(tr('Turn mistakes from your own games into puzzles, then practice them with saved review progress.'))
+    st.write(tr('Use the sound icon in the upper-right corner to mute or unmute move sounds. The magnifying-glass icon below the board opens the saved original game in a new tab when a link is available.'))
     for title, paragraphs in SECTIONS:
         st.subheader(tr(title))
         for paragraph in paragraphs:

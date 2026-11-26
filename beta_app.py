@@ -28,7 +28,7 @@ def services(url, stockfish_path):
 
 def clear_private_state():
     for key in list(st.session_state):
-        if key not in ('ui_language', '_session_cookie_command', '_session_cookie_token_hash', '_ignore_browser_session'):
+        if key not in ('ui_language', 'sound_enabled', '_session_cookie_command', '_session_cookie_token_hash', '_ignore_browser_session'):
             del st.session_state[key]
 
 
@@ -68,11 +68,11 @@ def account_screen(accounts):
 
 def account_menu(username, sign_out, default_player=None, save_player=None, palette='Brown', save_palette=None):
     st.html('''<style>
-    [data-testid="stToolbarActions"]{padding-inline-start:13rem}
-    .st-key-account_menu{position:fixed;top:3.75rem;right:6.25rem;width:7rem;z-index:1000002}
+    [data-testid="stToolbarActions"]{padding-inline-start:16rem}
+    .st-key-account_menu{position:fixed;top:3.75rem;right:9rem;width:7rem;z-index:1000002}
     .st-key-account_menu [data-testid="stPopoverButton"]{height:2.5rem;padding:0.25rem 0.5rem;border:0;background:transparent}
     @supports(position-anchor:--chess-toolbar-actions){
-      .st-key-account_menu{position-anchor:--chess-toolbar-actions;top:calc(anchor(center,1.625rem) - 1.25rem);left:calc(anchor(left) + 6rem);right:auto}
+      .st-key-account_menu{position-anchor:--chess-toolbar-actions;top:calc(anchor(center,1.625rem) - 1.25rem);left:calc(anchor(left) + 9rem);right:auto}
     }
     </style>''')
     with st.popover(tr('Account'), key='account_menu'):

@@ -1,7 +1,9 @@
 /* Crisp wooden piece-on-board tap with a short, non-resonant impact. */
 (function(root) {
-  let context, impact;
+  let context, impact, enabled = true;
+  function setEnabled(value) { enabled = value !== false; }
   function play() {
+    if (!enabled) return;
     try {
       const AudioContext = root.AudioContext || root.webkitAudioContext;
       if (!AudioContext) return;
@@ -21,7 +23,7 @@
         }
       }
       const click = () => {
-        if (context.state !== 'running') return;
+        if (!enabled || context.state !== 'running') return;
         const now = context.currentTime;
         const source = context.createBufferSource();
         const filter = context.createBiquadFilter();
@@ -44,5 +46,5 @@
       // Audio being unavailable must never block a move or navigation.
     }
   }
-  root.ChessMoveSound = {play};
+  root.ChessMoveSound = {play, setEnabled};
 })(globalThis);

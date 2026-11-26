@@ -135,11 +135,6 @@ def trainer(repository, playback_engine, review_tab, library_tab, guide_page=Fal
             st.info(tr('Preparing your selected library. Please wait for analysis to finish.'))
         return
     if setup is None:
-        with review_tab:
-            if getattr(repository, 'default_username', None) is not None:
-                st.info(tr('Choose dates and mistake size in the sidebar, then click Start reviewing. Manage your default player in Account, or choose a temporary player in Advanced settings.'))
-            else:
-                st.info(tr('Choose your chess username, dates, and minimum loss in the left sidebar, then click Start reviewing.'))
         with library_tab:
             st.info(tr('Click Start reviewing in the sidebar to choose which saved puzzles to browse.'))
         return
@@ -233,7 +228,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
     </style>''')
     with st.container(key='practice_board'):
         event = drag_board(board, key=f"board-{cycle['token']}", response=response,
-                           context_id=key, hint_square=puzzle['best_move'][:2])
+                           context_id=key, hint_square=puzzle['best_move'][:2], game_url=puzzle.get('game_url', ''))
     seen = st.session_state.setdefault('board_events', [])
     new_event = (isinstance(event, dict) and event.get('fen') == board.fen()
                  and event.get('context_id', key) == key
@@ -308,9 +303,6 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
         else:
             kind = puzzle.get('kind', '')
             st.write(tr(kind) if kind else tr(''))
-        url = puzzle.get('game_url', '')
-        if url.startswith(('https://', 'http://')):
-            st.link_button(tr('Open original game'), url)
     def next_puzzle():
         cycle['index'] = index + 1
         if cycle['index'] >= len(puzzles):

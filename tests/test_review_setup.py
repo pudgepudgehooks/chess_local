@@ -104,7 +104,8 @@ class ReviewSetupUITests(unittest.TestCase):
              patch('drag_board.drag_board', return_value=None):
             app = AppTest.from_string('from visualization_all import main\nmain()', default_timeout=30).run(timeout=30)
             self.assertFalse(app.exception)
-            self.assertTrue(any('click Start reviewing' in item.value for item in app.info))
+            self.assertTrue(app.button(key='start_review'))
+            self.assertFalse(any('Choose your chess username' in item.value for item in app.info))
             self.assertFalse(any(b.key == 'next_puzzle' for b in app.button))
             self.assertTrue(app.sidebar.button(key='start_review'))
             self.assertFalse(app.main.number_input)

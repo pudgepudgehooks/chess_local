@@ -3,6 +3,9 @@ import re
 import streamlit as st
 
 ZH = {
+    'Use the sound icon in the upper-right corner to mute or unmute move sounds. The magnifying-glass icon below the board opens the saved original game in a new tab when a link is available.': '右上角的声音图标可开启或关闭走子音效。保存了对局链接时，点击棋盘下方的放大镜图标，即可在新标签页打开原始对局。',
+    'Mute sound': '关闭声音',
+    'Unmute sound': '开启声音',
     'Choose Board color under Account and click Save board color. Brown, Green, Blue, and Purple are available. Your choice is saved to your account and applies to Practice and Mistake library without changing your current review. Use Previous and Next to browse puzzles; Previous is disabled on the first puzzle.': '在“账号”中选择“棋盘颜色”并点击“保存棋盘颜色”。可选棕色、绿色、蓝色和紫色。颜色会保存到你的账号，同时用于练习和错题库，且不会更改当前复习。使用前后导航按钮切换题目；第一题时向前返回的按钮不可用。',
     'Board color': '棋盘颜色',
     'Save board color': '保存棋盘颜色',
@@ -337,10 +340,13 @@ def language_selector():
         requested = st.query_params.get('lang', 'en')
         st.session_state.ui_language = requested if requested in ('en', 'zh') else 'en'
     st.html('''<style>
-    [data-testid="stToolbarActions"]{anchor-name:--chess-toolbar-actions;padding-inline-start:6rem}
+    [data-testid="stToolbarActions"]{anchor-name:--chess-toolbar-actions;padding-inline-start:9rem}
     .st-key-language_toggle{position:fixed;top:3.75rem;right:0.75rem;width:2.5rem;z-index:1000002}
+    .st-key-sound_toggle{position:fixed;top:3.75rem;right:6.25rem;width:2.5rem;z-index:1000002}
+    .st-key-sound_toggle button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
     .st-key-language_toggle button{width:2.5rem;height:2.5rem;padding:0;border-radius:0.5rem}
     @supports(position-anchor:--chess-toolbar-actions){
+      .st-key-sound_toggle{position-anchor:--chess-toolbar-actions;top:calc(anchor(center, 1.625rem) - 1.25rem);left:calc(anchor(left) + 6rem);right:auto}
       .st-key-language_toggle{position-anchor:--chess-toolbar-actions;top:calc(anchor(center, 1.625rem) - 1.25rem);left:calc(anchor(left) + 0.25rem);right:auto}
     }
     </style>''')
@@ -352,3 +358,9 @@ def language_selector():
         for key in ('analysis_source', 'analysis_loss_level'):
             if key in st.session_state:
                 st.session_state[key] = st.session_state[key]
+
+    def toggle_sound():
+        st.session_state.sound_enabled = not st.session_state.get('sound_enabled', True)
+    enabled = st.session_state.get('sound_enabled', True)
+    st.button('', icon=':material/volume_up:' if enabled else ':material/volume_off:', key='sound_toggle',
+              type='tertiary', help=tr('Mute sound' if enabled else 'Unmute sound'), on_click=toggle_sound)
