@@ -103,7 +103,7 @@ class TrainerUITests(unittest.TestCase):
             app = self.app(library).run(timeout=30)
             self.assertFalse(app.exception)
             self.assertFalse(any('Correct! Use Forward and Back to review the continuation.' in item.value for item in app.success))
-            self.assertFalse(any('Saved attempts:' in item.value for item in app.get('tab')[0].caption))
+            self.assertFalse(any('Saved attempts:' in item.value for item in app.caption))
             self.assertEqual(save.call_count, 1)
             response = component.call_args.kwargs['response']
             self.assertEqual(response['status'], 'correct')

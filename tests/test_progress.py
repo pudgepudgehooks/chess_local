@@ -93,7 +93,7 @@ class ProgressUITests(unittest.TestCase):
             self.assertFalse(app.exception)
             self.assertIn('已分析你的着法', app.get('progress')[0].proto.text)
 
-    def test_only_newest_completed_message_is_visible(self):
+    def test_completed_messages_are_hidden_but_library_still_reloads(self):
         from streamlit.testing.v1 import AppTest
         jobs = [dict(id='new', state='done', completed=1, message='Added 7 puzzles. Refresh your library to review them.'),
                 dict(id='old', state='done', completed=1, message='Added 3 puzzles. Refresh your library to review them.')]
@@ -106,9 +106,9 @@ class ProgressUITests(unittest.TestCase):
             app.session_state.active_id = 'old-puzzle'
             app.session_state.board_feedback = {'key': 'old-puzzle'}
             app.run()
-            self.assertEqual(len(app.get('progress')), 1)
+            self.assertEqual(len(app.get('progress')), 0)
             text = ' '.join(item.value for item in app.markdown)
-            self.assertIn('Added 7 puzzles', text)
+            self.assertNotIn('Added 7 puzzles', text)
             self.assertNotIn('Added 3 puzzles', text)
             self.assertFalse(any(b.key == 'refresh_library' for b in app.button))
             self.assertEqual(app.session_state['analysis_library_loaded_job'], ('alice', 'new'))
@@ -120,7 +120,7 @@ class ProgressUITests(unittest.TestCase):
             app.run()
             self.assertEqual(app.session_state['review_cycle'], {'state': 'active'}, 'completed job reloads the library only once')
 
-    def test_running_job_completion_is_shown_only_in_observing_session(self):
+    def test_running_progress_disappears_after_completion(self):
         from streamlit.testing.v1 import AppTest
         job = dict(id='active', state='running', completed=0, message='Analyzing games',
                    positions_done=1, positions_total=2)
@@ -131,8 +131,8 @@ class ProgressUITests(unittest.TestCase):
             job.update(state='done', completed=1,
                        message='Added 8 puzzles. Refresh your library to review them.')
             app.run()
-            self.assertIn('Analysis complete', app.get('progress')[0].proto.text)
-            self.assertIn('Added 8 puzzles', ' '.join(item.value for item in app.markdown))
+            self.assertEqual(len(app.get('progress')), 0)
+            self.assertNotIn('Added 8 puzzles', ' '.join(item.value for item in app.markdown))
             fresh = AppTest.from_string(code).run(timeout=30)
             self.assertEqual(len(fresh.get('progress')), 0)
             self.assertNotIn('Added 8 puzzles', ' '.join(item.value for item in fresh.markdown))

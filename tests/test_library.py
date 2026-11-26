@@ -36,7 +36,7 @@ class LibraryUITests(unittest.TestCase):
             app.session_state.main_tab_name = 'Mistake library'
             app.run(timeout=30)
             self.assertFalse(app.exception)
-            self.assertEqual([tab.proto.label for tab in app.get('tab')], ['Practice'])
+            self.assertFalse(app.get('tab'))
             self.assertEqual(app.session_state['main_tab_name'], 'Practice')
             self.assertFalse(self.open_ids(app))
             self.assertTrue(app.button(key='next_puzzle'))

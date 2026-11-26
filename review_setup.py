@@ -90,7 +90,7 @@ def prepare_start(library, setup, repository=None, uploaded=None, executable=Non
     puzzle_store.save_library(working)
     library.clear()
     library.update(working)
-    progress.progress(1.0, text=tr('Analysis complete · 100%'))
+    progress.empty()
     return plan
 
 

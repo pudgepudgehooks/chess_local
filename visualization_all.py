@@ -73,7 +73,7 @@ def job_status(repository):
         st.session_state.pop('pending_review_plan', None)
         st.session_state.review_start_error = selected['message']
         st.rerun()
-    for job in [selected] if selected is not None else []:
+    for job in [selected] if selected is not None and selected['state'] != 'done' else []:
         st.caption(tr('{state} · {count} games analyzed', state=tr(job['state'].capitalize()), count=job['completed']))
         fraction, label = progress_display(job)
         st.progress(fraction, text=label)
@@ -105,9 +105,11 @@ def main(repository=None, playback_engine=None):
         name = 'Practice'
     st.session_state.main_tab_name = name
     st.session_state.main_tab = tr(name)
-    tabs = st.tabs([tr(name) for name in (TAB_NAMES if SHOW_MISTAKE_LIBRARY else ['Practice'])],
-                   key='main_tab', on_change=remember_main_tab)
-    review_tab, library_tab = tabs[0], tabs[1] if SHOW_MISTAKE_LIBRARY else None
+    if SHOW_MISTAKE_LIBRARY:
+        review_tab, library_tab = st.tabs([tr(name) for name in TAB_NAMES],
+            key='main_tab', on_change=remember_main_tab)
+    else:
+        review_tab, library_tab = st.container(), None
     trainer(repository, playback_engine, review_tab, library_tab)
 
 
@@ -147,8 +149,6 @@ def trainer(repository, playback_engine, review_tab, library_tab, guide_page=Fal
     plan = st.session_state.get('review_plan', {})
     if st.session_state.get('review_cycle', {}).get('state') not in ('complete', 'rest'):
         with review_tab:
-            if plan.get('selected'):
-                st.caption(tr('Analyzed {count} games for this review.', count=plan['selected']))
             if plan.get('remaining'):
                 st.info(tr('{count} more fetched games still need analysis. Click Start reviewing again to process the next batch.', count=plan['remaining']))
             if plan and not plan.get('fetched'):
