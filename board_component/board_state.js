@@ -28,7 +28,7 @@
     });
   }
   class BoardSession {
-    constructor(fen) {
+    constructor(fen, intro=null) {
       this.originalFen = this.fen = fen;
       this.pendingId = this.handledId = this.uci = null;
       this.busy = this.solved = false;
@@ -37,6 +37,22 @@
       this.feedback = null;
       this.retryRequired = false;
       this.hintSquare = null;
+      this.intro = intro;
+      this.introPlaying = !!intro;
+      if (intro) { this.fen = intro.fen; this.busy = true; }
+    }
+    revealIntro() {
+      if (!this.introPlaying) return false;
+      this.fen = this.originalFen;
+      this.uci = this.intro.uci;
+      return true;
+    }
+    finishIntro() {
+      if (!this.introPlaying) return false;
+      this.revealIntro();
+      this.introPlaying = false;
+      this.busy = false;
+      return true;
     }
     showHint(square) {
       if (this.busy || this.solved || this.retryRequired || !/^[a-h][1-8]$/.test(square || '')) return false;
@@ -70,6 +86,8 @@
       this.solved = response.status === 'correct' && this.frames.length > 0;
       this.feedback = (this.solved || response.status === 'incorrect') && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(answeredMove || '')
         ? {square:answeredMove.slice(2,4), status:response.status} : null;
+      if (this.feedback && response.status === 'incorrect' && response.repeat_game_mistake) this.feedback.repeated = true;
+      this.introPlaying = false;
       this.busy = false;
       this.retryRequired = response.status === 'incorrect' && !!this.feedback && !!attemptedFen;
       this.fen = this.solved ? this.frames[0].fen : this.retryRequired ? attemptedFen : this.originalFen;

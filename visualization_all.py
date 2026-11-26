@@ -235,7 +235,8 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
     </style>''')
     with st.container(key='practice_board'):
         event = drag_board(board, key=f"board-{cycle['token']}", response=response,
-                           context_id=key, hint_square=puzzle['best_move'][:2], game_url=puzzle.get('game_url', ''))
+                           context_id=key, hint_square=puzzle['best_move'][:2], game_url=puzzle.get('game_url', ''),
+                           opponent_move=puzzle.get('opponent_move'))
     seen = st.session_state.setdefault('board_events', [])
     new_event = (isinstance(event, dict) and event.get('fen') == board.fen()
                  and event.get('context_id', key) == key
@@ -289,6 +290,7 @@ def practice_puzzles(library, repository, playback_engine, owned, available, due
                 result['status'] = 'error'
                 message = 'Could not save your review. Please try again.'
         result['message'] = message
+        result['repeat_game_mistake'] = result['status'] == 'incorrect' and move is not None and move.uci() == puzzle['played']
         st.session_state.board_feedback = {'key': key, 'response': result}
         st.rerun()
     if response:

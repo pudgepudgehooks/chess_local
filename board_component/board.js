@@ -24,8 +24,8 @@ function highlights() {
         square.append(badge);
       }
       const correct = feedback.status === 'correct';
-      badge.className = 'answer-badge ' + (correct ? 'answer-correct' : 'answer-incorrect');
-      badge.setAttribute('aria-label', t(correct ? 'Correct answer' : 'Incorrect answer'));
+      badge.className = 'answer-badge ' + (correct ? 'answer-correct' : feedback.repeated ? 'answer-repeated' : 'answer-incorrect');
+      badge.setAttribute('aria-label', t(correct ? 'Correct answer' : feedback.repeated ? 'Repeated game mistake' : 'Incorrect answer'));
       badge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+
         (correct ? 'M5 12l4 4L19 6' : 'M6 6l12 12M18 6L6 18')+'"/></svg>';
     } else if (badge) badge.remove();
@@ -36,7 +36,7 @@ function deselect() {
   board.querySelectorAll('.dragging').forEach(square => square.classList.remove('dragging'));
   highlights(); height();
 }
-function render({animate=true, drop=null}={}) {
+function render({animate=true, drop=null, duration=220}={}) {
   const animations = [];
   const pieces = placement(session.fen);
   const files = args.white ? 'abcdefgh' : 'hgfedcba', ranks = args.white ? '87654321' : '12345678';
@@ -71,7 +71,7 @@ function render({animate=true, drop=null}={}) {
         const animation = svg.animate([
           {transform:`translate(${origin.left - destination.left}px, ${origin.top - destination.top}px)`},
           {transform:'translate(0, 0)'},
-        ], {duration:drop?.to === to ? 110 : 220, easing:'cubic-bezier(0.22, 0.61, 0.36, 1)'});
+        ], {duration:drop?.to === to ? 110 : duration, easing:'cubic-bezier(0.22, 0.61, 0.36, 1)'});
         animation.onfinish = animation.oncancel = () => { square.style.zIndex = ''; };
         animations.push(animation.finished.catch(() => {}));
       }
@@ -89,6 +89,7 @@ function render({animate=true, drop=null}={}) {
   status.textContent = quietStatus.includes(session.status) ? '' : t(session.status, args.response?.message_values || {});
   status.hidden = !status.textContent;
   navigation.hidden = !session.solved;
+  board.setAttribute('aria-busy', String(session.busy));
   retry.hidden = !session.retryRequired;
   retry.setAttribute('aria-label', t('Try again'));
   retry.title = t('Reset the board and try again');
@@ -186,12 +187,24 @@ retry.onclick=async () => {
   if (session === resetting && session.fen === session.originalFen) ChessMoveSound.play();
 };
 hint.onclick=() => { if (session.showHint(args.hint_square)) highlights(); };
+function playIntro(opening) {
+  // Let the preceding position paint before animating the opponent's move.
+  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(async () => {
+    if (session !== opening || !opening.introPlaying) return;
+    opening.revealIntro();
+    await render({duration:360});
+    if (session !== opening || !opening.introPlaying) return;
+    opening.finishIntro();
+    render({animate:false});
+    ChessMoveSound.play();
+  }, 240)));
+}
 window.addEventListener('message', e => {
   if (e.source!==window.parent || e.data.type!=='streamlit:render') return;
   const incoming=e.data.args;
   const contextChanged=!session || session.originalFen!==incoming.fen || args?.context_id!==incoming.context_id;
   if (contextChanged) {
-    session=new BoardSession(incoming.fen);
+    session=new BoardSession(incoming.fen, incoming.response ? null : incoming.opponent_move);
     selected=null; drag=null; ghost.hidden=true; promotion.hidden=true;
     renderedFen=null;
   }
@@ -213,6 +226,7 @@ window.addEventListener('message', e => {
   // An unrelated rerun must preserve an unacknowledged drop or current playback step.
   if (contextChanged || received || !drag) render({animate:!contextChanged});
   if (received) deselect();
+  if (contextChanged && session.introPlaying) playIntro(session);
 });
 new ResizeObserver(height).observe(document.getElementById('wrap'));
 send('streamlit:componentReady',{apiVersion:1}); height();

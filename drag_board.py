@@ -7,6 +7,7 @@ import chess.engine
 from streamlit.components.v1 import declare_component
 from i18n import tr, language
 from board_theme import current_board_colors
+from puzzle_context import validated_opponent_move
 
 _component = declare_component('chess_drag_board', path=str(Path(__file__).parent / 'board_component'))
 
@@ -61,7 +62,7 @@ def prepare_board(fen):
     return {'previews': previews, 'legal': list(previews)}
 
 
-def drag_board(board, key, response=None, context_id=None, hint_square=None, game_url=''):
+def drag_board(board, key, response=None, context_id=None, hint_square=None, game_url='', opponent_move=None):
     prepared = prepare_board(board.fen())
     from urllib.parse import urlsplit
     import streamlit as st
@@ -74,6 +75,7 @@ def drag_board(board, key, response=None, context_id=None, hint_square=None, gam
         fen=board.fen(), white=board.turn == chess.WHITE,
         response=response, context_id=context_id, hint_square=hint_square,
         game_url=safe_url, sound_enabled=st.session_state.get('sound_enabled', True),
+        opponent_move=validated_opponent_move(board, opponent_move),
         previews=prepared['previews'], colors=current_board_colors(),
         assets={chess.Piece(piece, color).symbol(): {
             'svg': piece_svg(chess.Piece(piece, color).symbol()),
@@ -83,6 +85,7 @@ def drag_board(board, key, response=None, context_id=None, hint_square=None, gam
         labels={key: tr(key) for key in [
             'Chess puzzle board', 'empty',
             'Correct answer', 'Incorrect answer',
+            'Repeated game mistake',
             'Try again', 'Reset the board and try again',
             'Hint',
             'Open original game',

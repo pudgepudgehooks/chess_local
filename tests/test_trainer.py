@@ -37,6 +37,8 @@ class AnalysisTests(unittest.TestCase):
         puzzles = [p for g in read_games(PGN + '\n\n' + PGN.replace('/1', '/2'))
                    for p in analyze_game(g, 'mE', engine)]
         self.assertEqual(len(puzzles), 4)
+        self.assertIsNone(puzzles[0]['opponent_move'])
+        self.assertEqual(puzzles[1]['opponent_move']['uci'], 'e7e5')
         self.assertTrue(all(engine.turns))
         self.assertEqual(len({p['id'] for p in puzzles}), 4)
         self.assertTrue(all('e2e4' not in p['accepted_moves'] for p in puzzles))

@@ -15,6 +15,7 @@ import chess.pgn
 import requests
 from game_dates import validate_date_range, within_dates
 from player_names import normalize_player_username
+from puzzle_context import opponent_move
 
 
 def engine_path(value=None):
@@ -228,6 +229,7 @@ def analyze_game(game, username, engine, depth=15, threshold=150, tolerance=30,
                 'platform': 'Lichess' if urlparse(source).hostname == 'lichess.org' else
                             'Chess.com' if (urlparse(source).hostname or '').endswith('.chess.com') or urlparse(source).hostname == 'chess.com' else 'PGN',
                 'move_number': board.fullmove_number, 'depth': depth})
+            puzzles[-1]['opponent_move'] = opponent_move(board)
         board.push(move)
         completed += 1
         if on_progress:

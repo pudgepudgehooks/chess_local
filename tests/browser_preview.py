@@ -50,6 +50,8 @@ if 'preview_library' not in st.session_state:
             loss=300 + i * 50, username='PreviewPlayer', opponent=f'Example opponent {i + 1}',
             game_url=f'https://example.com/game/{i}',
             date=f'2026.{8 if i < 3 else 9:02d}.{i + 1:02d}', move_number=board.fullmove_number))
+        from puzzle_context import opponent_move
+        puzzles[-1]['opponent_move'] = opponent_move(board)
     st.session_state.preview_texts = texts
     st.session_state.preview_library = {'version': 1, 'puzzles': puzzles,
         'analyses': coverage_records('PreviewPlayer', texts, 30, 100, LOCAL_POLICY)}

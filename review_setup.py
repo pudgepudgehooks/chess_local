@@ -60,6 +60,10 @@ def prepare_start(library, setup, repository=None, uploaded=None, executable=Non
         return dict(job_id=None, fetched=0, reused=0, selected=0, remaining=0)
     if repository:
         return repository.prepare_analysis(username, texts, setup['depth'], setup['threshold'])
+    from puzzle_context import enrich_puzzles
+    if enrich_puzzles(library['puzzles'],
+            (game for text in texts for game in chess_analysis.read_games(text)), username):
+        puzzle_store.save_library(library)
     plan = plan_analysis(username, texts, library.get('analyses', []), setup['depth'],
                          setup['threshold'], LOCAL_POLICY)
     items = plan.pop('items')

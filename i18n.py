@@ -3,6 +3,7 @@ import re
 import streamlit as st
 
 ZH = {
+    'Repeated game mistake': '重复了实战中的错误着法',
     'Use the sound icon in the upper-right corner to mute or unmute move sounds. The magnifying-glass icon below the board opens the saved original game in a new tab when a link is available.': '右上角的声音图标可开启或关闭走子音效。保存了对局链接时，点击棋盘下方的放大镜图标，即可在新标签页打开原始对局。',
     'Mute sound': '关闭声音',
     'Unmute sound': '开启声音',
@@ -92,7 +93,7 @@ ZH = {
     'Import at most 100 games when preparing a review.': '准备复习时最多导入 100 局。',
     'In the sidebar, choose Chess.com, Lichess, or Upload PGN and enter the chess username to analyze. Games to analyze lets you select a month or a Date range using the start and end calendars. Uploaded PGNs can also be filtered by date. Both dates are included; unknown dates are excluded in range mode. Analysis ranges can cover up to 366 days, and beta requests still analyze at most five games.': '在侧栏选择 Chess.com、Lichess 或上传 PGN，并输入要分析的棋谱用户名。“要分析的对局”可按月份筛选，或使用开始和结束日期日历选择日期范围。上传的 PGN 也可按日期筛选。范围包含两端日期，日期未知的对局不会被选入。分析范围最多 366 天，内测版每次仍最多分析 5 局。',
     'Review dates lets you choose Saved month or Date range. Saved game month includes All months and Unknown date. Date range uses Review start date and Review end date, includes both days, and hides undated puzzles. These filters apply to Practice and Mistake library, including shuffled restarts, without deleting puzzles or review history.': '“复习日期选择”可选择已保存的月份或日期范围。月份筛选包括所有月份和日期未知。日期范围使用复习开始日期和复习结束日期，包含两端日期，并隐藏日期未知的题目。这些条件同时作用于练习、错题库和打乱顺序后的新一轮练习，不会删除题目或复习记录。',
-    'An incorrect move stays on the board with a red cross. Click the red retry button below the board to restore the original position and clear the feedback before trying again. Resetting does not record another attempt. After a correct answer, the piece stays where you moved it with a green check. Click Forward or Back to move through the continuation one step at a time. Back can return to the original position. Nothing plays automatically, and navigating the line does not record more attempts.': '答错后，棋子会停在所走的格子上，并显示红色叉号。点击棋盘下方红色的重试按钮，棋盘会复原并清除反馈，之后即可再次作答。复原不会增加作答次数。答对后，棋子会停在目标格并显示绿色勾号。点击“向前”或“向后”可逐步查看后续着法，并可退回初始局面。不会自动播放，查看后续着法也不会增加尝试次数。',
+    'The opponent\'s preceding move is shown before you answer when game history is available. An incorrect move stays on the board with a red cross, or an orange cross if you repeated your actual game mistake. Click the red retry button below the board to restore the original position and clear the feedback before trying again. Resetting does not record another attempt. After a correct answer, the piece stays where you moved it with a green check. Click Forward or Back to move through the continuation one step at a time. Back can return to the original position. Nothing plays automatically, and navigating the line does not record more attempts.': '有对局历史时，答题前会先演示对手的上一步。答错后棋子会停在目标格上；重复实战中的错误着法显示橙色叉号，其他错误着法显示红色叉号。点击棋盘下方红色的重试按钮，棋盘会复原并清除反馈，之后即可再次作答。复原不会增加作答次数。答对后，棋子会停在目标格并显示绿色勾号。点击“向前”或“向后”可逐步查看后续着法，并可退回初始局面。不会自动播放，查看后续着法也不会增加尝试次数。',
     'Games to analyze': '要分析的对局',
     'Date range': '日期范围',
     'All uploaded games': '全部上传的对局',

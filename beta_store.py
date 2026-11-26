@@ -93,6 +93,15 @@ class BetaStore:
         from beta_worker import validate_payload
         payload = validate_payload(username, texts, depth, threshold, max_games=100)
         username = payload['username']
+        from chess_analysis import read_games
+        from puzzle_context import enrich_puzzles
+        with self.engine.begin() as db:
+            db.execute(select(guard).where(guard.c.id == 1).with_for_update()).first()
+            library = self._load_library(db, owner)
+            for puzzle in enrich_puzzles(library['puzzles'],
+                    (game for text in texts for game in read_games(text)), username):
+                db.execute(update(puzzles).where(puzzles.c.owner == owner, puzzles.c.id == puzzle['id'])
+                    .values(data=json.dumps(puzzle)))
         plan = plan_analysis(username, texts, self.coverage(owner), depth, threshold, BETA_POLICY)
         selected = [item['text'] for item in plan.pop('items')]
         plan['job_id'] = self.submit(owner, dict(payload, texts=selected), allow_completed=False) if selected else None
